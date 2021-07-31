@@ -3,6 +3,7 @@ import {createChart, LineStyle} from 'lightweight-charts';
 import axios from 'axios';
 import {set, takeRight, take} from 'lodash';
 import './App.css';
+import {Bar} from './model/Bar';
 
 const axiosInstance = axios.create({
   baseURL: 'https://api.binance.com',
@@ -31,9 +32,11 @@ const lineWidths = {
   [h1]: 1,
   [d1]: 2
 }
+const minOrderPercentage = 1; // четверть 5-минутного объема
+const priceDistance = 0.005; // расстояние до цены в долях от цены
 
 const setExtremes = (state, interval) => {
-  const data = state?.data?.[interval];
+  const data = state?.data?.[interval]?.array;
   const series = state?.series;
   if (data?.length && series) {
     const lineWidth = lineWidths[interval];
@@ -42,9 +45,7 @@ const setExtremes = (state, interval) => {
     let highPushed = false;
     let lowPushed = false;
     for(let i = data.length - 1; i >= 0; i--) {
-      const time = data[i][0];
-      const high = Number(data[i][2]);
-      const low = Number(data[i][3]);
+      const {high, low, time} = data[i];
       if (i === data.length - 1) {
         currentHigh = [high, time];
         currentLow = [low, time];
@@ -135,59 +136,77 @@ const setOrderLines = (state) => {
   if (!state?.orders) {
     state.orders = {asks: {}, bids: {}};
   }
-  const {orderBook, series} = state;
+  const {averageVolume, orderBook, series} = state;
   const {asks, bids} = orderBook || {};
   // искать плотности больше чем 1/4 объема на 5 минутах
   if (asks) {
     let askPrices = Object.keys(asks).map((ask) => Number(ask)).sort((a, b) => a - b);
     const bestAsk = askPrices[0];
-    askPrices = askPrices
-      .filter((price) => (price - bestAsk) / bestAsk < 0.005)
-      .sort((a, b) => asks[b] - asks[a]);
-    const maxVolume = asks[askPrices[0]];
-    const orderLine = {
-      ...priceLine,
-      color: '#107b00',
-      lineStyle: LineStyle.Solid,
-      axisLabelVisible: true,
-      price: askPrices[0],
-      lineWidth: 1,
-      title: maxVolume
-    };
+    let volumes;
+    if (averageVolume) {
+      volumes = askPrices
+        .filter((price) => (price - bestAsk) / bestAsk < priceDistance && asks[price] > averageVolume * minOrderPercentage)
+        .map((price) => [price, asks[price]]);
+    } else {
+      askPrices = askPrices
+        .filter((price) => (price - bestAsk) / bestAsk < priceDistance)
+        .sort((a, b) => asks[b] - asks[a]);
+      volumes = [askPrices[0], asks[askPrices[0]]];
+    }
     const orders = state.orders.asks;
     if (series) {
       if (orders) {
         Object.keys(orders).forEach((price) => {
           series.removePriceLine(orders[price]);
+          delete orders[price];
         });
       }
-      orders[askPrices[0]] = series.createPriceLine(orderLine);
+      volumes?.forEach((volume) => {
+        orders[volume[0]] = series.createPriceLine({
+          ...priceLine,
+          color: '#107b00',
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          price: volume[0],
+          lineWidth: 1,
+          title: volume[1]
+        });
+      });
     }
   }
   if (bids) {
     let bidPrices = Object.keys(bids).map((bid) => Number(bid)).sort((a, b) => b - a);
     const bestBid = bidPrices[0];
-    bidPrices = bidPrices
-      .filter((price) => (bestBid - price) / bestBid < 0.005)
-      .sort((a, b) => bids[b] - bids[a]);
-    const maxVolume = bids[bidPrices[0]];
-    const orderLine = {
-      ...priceLine,
-      color: '#107b00',
-      lineStyle: LineStyle.Solid,
-      axisLabelVisible: true,
-      price: bidPrices[0],
-      lineWidth: 1,
-      title: maxVolume
-    };
+    let volumes;
+    if (averageVolume) {
+      volumes = bidPrices
+        .filter((price) => (bestBid - price) / bestBid < priceDistance && bids[price] > averageVolume * minOrderPercentage)
+        .map((price) => [price, bids[price]]);
+    } else {
+      bidPrices = bidPrices
+        .filter((price) => (bestBid - price) / bestBid < priceDistance)
+        .sort((a, b) => bids[b] - bids[a]);
+      volumes = [bidPrices[0], bids[bidPrices[0]]];
+    }
     const orders = state.orders.bids;
     if (series) {
       if (orders) {
         Object.keys(orders).forEach((price) => {
           series.removePriceLine(orders[price]);
+          delete orders[price];
         });
       }
-      orders[bidPrices[0]] = series.createPriceLine(orderLine);
+      volumes?.forEach((volume) => {
+        orders[volume[0]] = series.createPriceLine({
+          ...priceLine,
+          color: '#107b00',
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          price: volume[0],
+          lineWidth: 1,
+          title: volume[1]
+        });
+      });
     }
   }
 };
@@ -221,10 +240,18 @@ const updateOrderBook = (orderBook, update) => {
   });
 };
 
+const setAverageVolume = (state) => {
+  const data = state?.data?.[m5]?.array;
+  if (data?.length && data.length > 4) {
+    const last4 = data.slice(data.length - 5, data.length - 1)?.map((bar) => bar.volume);
+    state.averageVolume = last4.reduce((acc, value) => acc + value, 0) / last4.length;
+  }
+};
+
 export const App = () => {
   const [state, setState] = useState({});
-  // const futures = state?.symbols?.futures ? Object.keys(state.symbols.futures).sort().slice(0, 3) : [];
-  const futures = ['BTCUSDT'];
+  const futures = state?.symbols?.futures ? Object.keys(state.symbols.futures).sort().slice(0, 18) : [];
+  // const futures = ['BTCUSDT'];
   stateLink.state = state;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -237,16 +264,23 @@ export const App = () => {
 
   useEffect(() => {
     if (state?.symbols?.futures) {
-      // const futures = Object.keys(state.symbols.futures).sort().slice(0, 3);
-      const futures = ['BTCUSDT'];
+      const futures = Object.keys(state.symbols.futures).sort().slice(0, 18);
+      // const futures = ['BTCUSDT'];
       if (futures.length) {
         futures.forEach((symbol) => {
           intervals.forEach((interval) => {
             if (!state[symbol]?.data?.[interval]) {
               set(state, [symbol, 'data', interval], []);
-              axiosInstance.get('/api/v3/klines', {params: {symbol, interval}}).then((data) => {
-                if (data.data) {
-                  set(state, [symbol, 'data', interval], data.data);
+              axiosInstance.get('/api/v3/klines', {params: {symbol, interval, limit: 1000}}).then((data) => {
+                if (data?.data?.length) {
+                  const {state} = stateLink;
+                  set(state, [symbol, 'data', interval], {map: {}, array: []});
+                  const {array, map} = state[symbol].data[interval];
+                  data.data.forEach((bar) => {
+                    const candle = new Bar(bar);
+                    candle.i = array.push(candle) - 1;
+                    map[candle.time] = candle;
+                  });
                   setState({...state});
                 }
               });
@@ -330,13 +364,13 @@ export const App = () => {
 
   useEffect(() => {
     if (state?.symbols?.futures) {
-      // const futures = Object.keys(state.symbols.futures).sort().slice(0, 3);
-      const futures = ['BTCUSDT'];
+      const futures = Object.keys(state.symbols.futures).sort().slice(0, 18);
+      // const futures = ['BTCUSDT'];
       if (futures.length) {
         futures.forEach((ticker) => {
           if (
-            state[ticker]?.data?.['1h']?.length &&
-            state[ticker]?.data?.['1d']?.length &&
+            state[ticker]?.data?.[h1]?.array?.length &&
+            state[ticker]?.data?.[d1]?.array?.length &&
             state[ticker]?.series &&
             !state[ticker]?.highs &&
             !state[ticker]?.lows
@@ -363,8 +397,8 @@ export const App = () => {
   useEffect(() => {
     const {state} = stateLink;
     if (state?.symbols?.futures) {
-      // const futures = Object.keys(state.symbols.futures).sort().slice(0, 3);
-      const futures = ['BTCUSDT'];
+      const futures = Object.keys(state.symbols.futures).sort().slice(0, 18);
+      // const futures = ['BTCUSDT'];
       if (futures.length) {
         futures.forEach((ticker) => {
           // if (!state[ticker].orderBook && state[ticker].series) {
@@ -452,19 +486,18 @@ export const App = () => {
 
   useEffect(() => {
     if (state?.symbols?.futures) {
-      // const futures = Object.keys(state.symbols.futures).sort().slice(0, 3);
-      const futures = ['BTCUSDT'];
+      const futures = Object.keys(state.symbols.futures).sort().slice(0, 18);
+      // const futures = ['BTCUSDT'];
       if (futures.length) {
         if (!state.check) state.check = [];
         futures.forEach((ticker) => {
           if (
             state[ticker]?.ref &&
-            state[ticker]?.data?.[m5]?.length &&
+            state[ticker]?.data?.[m5]?.array?.length &&
             !state[ticker]?.series
           ) {
-            const data = state[ticker]?.data?.[m5];
-            const last5 = takeRight(data, 5)?.map((candlestick) => candlestick[5] && Number(candlestick[5]))?.sort((a, b) => b - a);
-            state[ticker].maxVolume = last5[0] || 0;
+            const data = state[ticker]?.data?.[m5]?.array;
+            setAverageVolume(state[ticker]);
             // console.log('last5', ticker, last5);
             // console.log('maxVolume', ticker, state[ticker].maxVolume);
             const chart = createChart(state[ticker].ref, { width: 580, height: 465 });
@@ -476,12 +509,12 @@ export const App = () => {
             // console.log('chart?.timeScale()', chart?.timeScale());
             const series = chart.addCandlestickSeries();
             state[ticker].series = series;
-            series.setData(data.map((candlestick) => ({
-              time: candlestick[0] / 1000,
-              open: Number(candlestick[1]),
-              high: Number(candlestick[2]),
-              low: Number(candlestick[3]),
-              close: Number(candlestick[4])
+            series.setData(data.map((bar) => ({
+              time: bar.time / 1000,
+              open: bar.open,
+              high: bar.high,
+              low: bar.low,
+              close: bar.close
             })));
             chart?.timeScale()?.setVisibleRange({
               from: (Date.now() - 60 * 60 * 12 * 1000) / 1000,
@@ -512,14 +545,19 @@ export const App = () => {
             ws.onmessage = (e) => {
               if (e.data) {
                 const update = JSON.parse(e.data);
-                console.log('kline_5m', ticker, update);
-                if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c) {
+                if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c && update?.k?.v) {
+                  const bar = new Bar(update.k);
                   // обновлять объемы свечей
                   const {state} = stateLink;
+                  console.log(ticker, state[ticker]);
+                  const {array, map} = state[ticker]?.data?.[m5] || {};
+                  if (map[bar.time]) map[bar.time] = bar;
+                  else {
+                    bar.i = array.push(bar) - 1;
+                    setAverageVolume(state[ticker]);
+                  }
                   const delta = 0.005;
-                  const high = Number(update.k.h);
-                  const low = Number(update.k.l);
-                  const time = update.k.t;
+                  const {time, open, high, low, close} = bar;
                   if (state[ticker]?.lows?.price?.length) {
                     const low1 = state[ticker].lows.price[0];
                     const time1 = state[ticker]?.lows?.[h1]?.[low1]?.time || state[ticker]?.lows?.[d1]?.[low1]?.time;
@@ -592,10 +630,10 @@ export const App = () => {
                   }
                   series.update({
                     time: time / 1000,
-                    open: Number(update.k.o),
+                    open,
                     high,
                     low,
-                    close: Number(update.k.c)
+                    close
                   });
                   setState({...state});
                 }
