@@ -1,9 +1,11 @@
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {createChart, LineStyle} from 'lightweight-charts';
 import axios from 'axios';
 import {set, takeRight, take} from 'lodash';
 import './App.css';
 import {Bar} from './model/Bar';
+import {Chart} from './components/Chart/Chart';
+import {State} from './model/State';
 
 const axiosInstance = axios.create({
   baseURL: 'https://api.binance.com',
@@ -250,9 +252,42 @@ const setAverageVolume = (state) => {
 
 export const App = () => {
   const [state, setState] = useState({});
+  const [stateWrapper, setStateWrapper] = useState({});
   const futures = state?.symbols?.futures ? Object.keys(state.symbols.futures).sort().slice(0, 18) : [];
   // const futures = ['BTCUSDT'];
   stateLink.state = state;
+  const {state: state1} = stateWrapper;
+
+  // useEffect(() => {
+  //   const arr = [];
+  //   const k = 1000000;
+  //   const l = 10000000;
+  //   for (let i = 0; i < 100000000; i++) {
+  //     arr.push(i);
+  //   }
+  //   let t1 = performance.now();
+  //   const arr2 = arr.slice(k, l);
+  //   let t2 = performance.now();
+  //   console.log('slice', t2 - t1);
+  //   t1 = performance.now();
+  //   const arr3 = arr.filter((v, i) => i >= k && i < l);
+  //   t2 = performance.now();
+  //   console.log('filter', t2 - t1);
+  // }, []);
+
+
+  console.log('state1', state1);
+
+  const dispatch = useCallback((state) => {
+    setStateWrapper({state});
+  }, []);
+
+  useEffect(() => {
+    if (!state1) {
+      console.log(dispatch);
+      setStateWrapper({state: new State({dispatch})});
+    }
+  }, [state1, dispatch]);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   // for (let ticker of futures) refs[ticker] = useRef();
@@ -291,30 +326,30 @@ export const App = () => {
     }
   }, [state]);
 
-  useEffect(() => {
-    if (!state.symbols) {
-      state.symbols = symbols;
-      axiosInstance.get('/api/v3/exchangeInfo').then((data) => {
-        if (data?.data?.symbols) {
-          data?.data?.symbols?.forEach((symbol) => {
-            if (symbol.symbol && symbol.quoteAsset === 'USDT' && symbol.status === 'TRADING') {
-              state.symbols.spot[symbol.symbol] = symbol;
-            }
-          });
-          axiosFutures.get('/fapi/v1/exchangeInfo').then((data) => {
-            if (data?.data?.symbols) {
-              data.data.symbols.forEach((symbol) => {
-                if (symbol.symbol && state.symbols.spot[symbol.symbol] && symbol.contractType === 'PERPETUAL') {
-                  state.symbols.futures[symbol.symbol] = symbol;
-                }
-              });
-              setState({...state});
-            }
-          });
-        }
-      });
-    }
-  }, [state]);
+  // useEffect(() => {
+  //   if (!state.symbols) {
+  //     state.symbols = symbols;
+  //     axiosInstance.get('/api/v3/exchangeInfo').then((data) => {
+  //       if (data?.data?.symbols) {
+  //         data?.data?.symbols?.forEach((symbol) => {
+  //           if (symbol.symbol && symbol.quoteAsset === 'USDT' && symbol.status === 'TRADING') {
+  //             state.symbols.spot[symbol.symbol] = symbol;
+  //           }
+  //         });
+  //         axiosFutures.get('/fapi/v1/exchangeInfo').then((data) => {
+  //           if (data?.data?.symbols) {
+  //             data.data.symbols.forEach((symbol) => {
+  //               if (symbol.symbol && state.symbols.spot[symbol.symbol] && symbol.contractType === 'PERPETUAL') {
+  //                 state.symbols.futures[symbol.symbol] = symbol;
+  //               }
+  //             });
+  //             setState({...state});
+  //           }
+  //         });
+  //       }
+  //     });
+  //   }
+  // }, [state]);
 
     // console.log('state', state);
 
@@ -431,7 +466,7 @@ export const App = () => {
                 const update = JSON.parse(e.data);
                 if (state[ticker].orderBookSynced) {
                   updateOrderBook(state[ticker].orderBook, update);
-                  setOrderLines(state[ticker]);
+                  // setOrderLines(state[ticker]);
                 } else {
                   state[ticker].orderStream.push(update);
                 }
@@ -669,18 +704,20 @@ export const App = () => {
   };
 
   return <div className="charts">
-    {futures.map((ticker) => <div className="chart" key={ticker} id={ticker}>
+    {/*futures.map((ticker) => <div className="chart" key={ticker} id={ticker}>
       <div>{ticker}</div>
       <div ref={(ref) => setRef(ref, ticker)} />
-    </div>)}
-    {state.check?.length ? <div className="check">
-      {state.check.map((ticker) => <div key={ticker} className="symbol">
+    </div>)*/}
+    {futures.map((ticker) => <Chart symbol={ticker} setRef={setRef} />)}
+    {state1?.tickerNames?.map((ticker) => <Chart ticker={state1.tickers[ticker]} key={ticker} />)}
+    {state1?.priceNearLevel?.length ? <div className="check">
+      {state1.priceNearLevel.map((ticker) => <div key={ticker.name} className="symbol">
         <a
-          href={`#${ticker}`}
-          className={state.class?.[ticker] || 'notChecked'}
-          onClick={() => setChecked(ticker)}
-        >{ticker}</a>
-        <span onClick={() => removeChecked(ticker)}>X</span>
+          href={`#${ticker.name}`}
+          className={ticker.checked ? 'checked' : 'notChecked'}
+          onClick={() => ticker.click()}
+        >{ticker.name}</a>
+        <span onClick={() => ticker.remove()}>X</span>
       </div>)}
     </div> : null}
   </div>;

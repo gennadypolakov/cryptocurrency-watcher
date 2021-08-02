@@ -1,5 +1,6 @@
 export class Bar {
   i; // array index
+  interval; // timeframe
   open;
   high;
   low;
@@ -7,8 +8,9 @@ export class Bar {
   volume;
   time;
 
-  constructor(data) {
-    if (Array.isArray(data)) {
+  constructor(data, interval) {
+    if (interval || Array.isArray(data)) {
+      this.interval = interval;
       this.create(data);
     } else {
       this.streamUpdate(data);
