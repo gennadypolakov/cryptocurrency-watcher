@@ -1,10 +1,11 @@
 import {useCallback, useEffect, useState} from 'react';
 import {createChart, LineStyle} from 'lightweight-charts';
 import axios from 'axios';
-import {set, takeRight, take} from 'lodash';
+import {set} from 'lodash';
+
 import './App.css';
 import {Bar} from './model/Bar';
-import {Chart} from './components/Chart/Chart';
+import {Chart, CommonSettings} from './components';
 import {State} from './model/State';
 
 const axiosInstance = axios.create({
@@ -708,7 +709,7 @@ export const App = () => {
       <div>{ticker}</div>
       <div ref={(ref) => setRef(ref, ticker)} />
     </div>)*/}
-    {futures.map((ticker) => <Chart symbol={ticker} setRef={setRef} />)}
+    {/*futures.map((ticker) => <Chart symbol={ticker} setRef={setRef} />)*/}
     {state1?.tickerNames?.map((ticker) => <Chart ticker={state1.tickers[ticker]} key={ticker} />)}
     {state1?.priceNearLevel?.length ? <div className="check">
       {state1.priceNearLevel.map((ticker) => <div key={ticker.name} className="symbol">
@@ -720,5 +721,6 @@ export const App = () => {
         <span onClick={() => ticker.remove()}>X</span>
       </div>)}
     </div> : null}
+    {state1?.config ? <CommonSettings state={state1} /> : null}
   </div>;
 }

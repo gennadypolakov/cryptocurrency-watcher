@@ -5,6 +5,7 @@ import {chartLimit, d1, h1, m5, orderTimeout} from '../config';
 import {Bar} from './Bar';
 import {Highs} from './Highs';
 import {Lows} from './Lows';
+import {Settings} from './Settings';
 
 const nextInterval = {
   [m5]: h1,
@@ -18,6 +19,7 @@ export class Ticker {
   chartData = {};
   chartElement;
   chartStream;
+  config;
   highs;
   lows;
   name;
@@ -34,6 +36,7 @@ export class Ticker {
       this.state = state;
       this.precision = this.futures?.[name]?.pricePrecision;
     }
+    this.config = new Settings(state, this.name);
   }
 
   createChart = (chartElement) => {
@@ -151,9 +154,13 @@ export class Ticker {
 
   setAverageVolume = () => {
     const data = this.chartData?.[m5]?.array;
-    if (data?.length && data.length > 20) {
-      const last4 = data.slice(data.length - 21, data.length - 1)?.map((bar) => bar.volume);
-      this.averageVolume = last4.reduce((acc, value) => acc + value, 0) / last4.length;
+    let count = this.config?.last5mCount || 10;
+    if (data?.length) {
+      if (count + 1 > data.length) count = data.length - 1;
+      if (count && count > 0) {
+        const last5m = data.slice(data.length - count - 1, data.length - 1)?.map((bar) => bar.volume);
+        this.averageVolume = last5m.reduce((acc, value) => acc + value, 0) / count;
+      }
     }
   }
 

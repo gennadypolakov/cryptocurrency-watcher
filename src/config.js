@@ -23,7 +23,8 @@ export const chartLimit = {
   [h1]: 500,
   [d1]: 500
 };
-export const minOrderPercentage = 1; // доля от 5-минутного объема
+export const minOrderPercentage = 1; // доля от среднего 5-минутного объема
+export const last5mCount = 10; // количество 5-минуток для среднего объема
 export const priceDistance = 0.005; // расстояние до цены в долях от цены
 export const checkedTimout = 1; // время через которое просмотренный тикер становится не просмотренным
 export const bannedTimout = 1;
