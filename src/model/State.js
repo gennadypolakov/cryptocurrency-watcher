@@ -1,17 +1,24 @@
 import {getFuturesExchangeInfo, getSpotExchangeInfo} from '../api';
+import {BehaviorSubject} from 'rxjs';
+import {set} from 'lodash';
+
 import {Ticker} from './Ticker';
-import {bannedTimout, checkedTimout, minLevelAge, minOrderPercentage, orderTimeout, priceDistance, removeOrderPercentage, removeTimeout} from '../config';
 import {Settings} from './Settings';
+import {Level} from './Level';
+import {Order} from './Order';
 
 export class State {
-  tickers;
-  tickerNames;
-  spot;
-  futures;
-  priceNearLevel = []; //{name: string, checked: boolean}
-  orderDensity = []; //{name: string, checked: boolean}
   banned = {}; //{name: string, checked: boolean}
   config;
+  events = {};
+  eventTickers;
+  events$ = new BehaviorSubject(null);
+  futures;
+  priceNearLevel = []; //{name: string, checked: boolean}
+  spot;
+  tickerNames;
+  tickers;
+  counter = 0;
 
   dispatch;
 
@@ -26,22 +33,27 @@ export class State {
     if (!this.spot) {
       this.getSpot();
     }
+    this.setNotification();
+    this.events$.subscribe(this.onEvent);
   }
 
-  getConfig = () => {
-    let config = localStorage.getItem('config')
-    if (config) return JSON.parse(config);
-    else return {
-      minOrderPercentage,
-      priceDistance,
-      checkedTimout,
-      bannedTimout,
-      orderTimeout,
-      minLevelAge,
-      removeTimeout,
-      removeOrderPercentage
+  onEvent = (event) => {
+    if (event && event.price && event.ticker?.name) {
+      if (
+        event instanceof Level &&
+        !this.events[event.ticker.name]?.level?.[event.price]
+      ) {
+        set(this.events, [event.ticker.name, 'level', event.price], event);
+        this.dispatch?.(this);
+      } else if (
+        event instanceof Order &&
+        !this.events[event.ticker.name]?.order?.[event.price]
+      ) {
+        set(this.events, [event.ticker.name, 'order', event.price], event);
+        this.dispatch?.(this);
+      }
     }
-  };
+  }
 
   getSpot = () => {
     this.spot = {};
@@ -93,6 +105,10 @@ export class State {
                     localStorage.removeItem(name);
                   }
                 });
+              Object.keys(this.config.tickers)
+                .forEach((name) => {
+                  this.config.tickers[name].isNew = false;
+                });
               this.config.save();
             }
             this.tickerNames = Object.keys(this.config.tickers)
@@ -100,7 +116,6 @@ export class State {
             this.tickerNames.forEach((name) => {
               this.tickers[name] = new Ticker(name, this);
             });
-            console.log(this.tickerNames);
             this.dispatch?.(this);
           }
         }
@@ -127,10 +142,38 @@ export class State {
     this.priceNearLevel = this.priceNearLevel.filter((t) => t.name !== ticker.name);
     this.banned[ticker.name] = ticker;
     this.dispatch?.(this);
-    setTimeout(() => {
-      delete this.banned[ticker.name];
-      this.dispatch?.(this);
-    }, bannedTimout * 60 * 1000);
+    if (this.config?.notificationTimeout) {
+      setTimeout(() => {
+        delete this.banned[ticker.name];
+        this.dispatch?.(this);
+      }, this.config.notificationTimeout * 60 * 1000);
+    }
   };
+
+  setNotification = () => {
+    // Let's check if the browser supports notifications
+    if (Notification) {
+      // alert("This browser support desktop notification");
+    }
+
+    // Let's check whether notification permissions have already been granted
+    // else if (Notification.permission === "granted") {
+    //   // If it's okay let's create a notification
+    //   var notification = new Notification("Hi there!");
+    // }
+    //
+    // // Otherwise, we need to ask the user for permission
+    // else if (Notification.permission !== "denied") {
+    //   Notification.requestPermission().then(function (permission) {
+    //     // If the user accepts, let's create a notification
+    //     if (permission === "granted") {
+    //       var notification = new Notification("Hi there!");
+    //     }
+    //   });
+    // }
+
+    // At last, if the user has denied notifications, and you
+    // want to be respectful there is no need to bother them any more.
+  }
 
 }

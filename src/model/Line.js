@@ -1,4 +1,5 @@
 import {priceLine} from '../config';
+import {LineStyle} from 'lightweight-charts';
 
 export class Line {
 
@@ -37,6 +38,13 @@ export class Line {
         options.title = this.title;
       }
       this.priceLine = this.series.createPriceLine(options);
+      setInterval(() => {
+        this.priceLine.applyOptions({
+          color: Math.floor(Math.random() * 2) ? 'red' : 'gray',
+          lineWidth: Math.floor(Math.random() * 2) ? 1 : 2,
+          lineStyle: Math.floor(Math.random() * 2) ? LineStyle.Dashed : LineStyle.Solid
+        });
+      }, 1000);
     }
     return this;
   }

@@ -1,4 +1,4 @@
-import {checkedTimout, d1, h1, lineWidths, m5, minLevelAge, priceDistance} from '../config';
+import {d1, lineWidths, m5} from '../config';
 import {Line} from './Line';
 
 const options = {
@@ -16,60 +16,48 @@ export class Lows {
   array = [];
   map = {};
   series;
-  first; // объект
-  firstD1; // объект
-  last; // объект
-  newHigh; // цена
+  state;
+  ticker;
 
-  constructor(name, series, state) {
-    this.name = name;
-    this.series = series;
-    this.state = state;
+  constructor(ticker) {
+    this.ticker = ticker;
+    this.series = ticker?.series;
+    this.state = ticker?.state;
+    this.name = ticker?.name;
   }
 
   check = (price, time) => {
-    // console.log(this.state.banned);
-    // console.log(this.state.priceNearLevel);
-    // console.log(this.name, price, time);
+    const {checkedTimout, minLevelAge, priceDistance} = this.ticker?.config || {};
     if (this.array[0]?.price) {
-      // console.log(this.name, price, this.array[0].price);
       if (this.array[0].price > price) {
         this.removeHigherLow(price);
         if (!this.map[price]) {
           this.createNew(price, m5, time);
         }
       } else if (
+        priceDistance &&
         !this.state.banned[this.name] &&
-        Date.now() - this.array[0].time > 1000 * 60 * 60 * minLevelAge &&
+        (!minLevelAge || Date.now() - this.array[0].time > 1000 * 60 * 60 * minLevelAge) &&
         this.array[0].price < price &&
         (price - this.array[0].price) / price < priceDistance
       ) {
-        // console.log(this.name, price);
         if (!this.state?.priceNearLevel?.find?.((ticker) => ticker.name === this.name)) {
           const ticker = {
             name: this.name,
             checked: false,
             click: () => {
               ticker.checked = true;
-              // console.log(ticker);
               this.state?.dispatch?.(this.state);
-              setTimeout(() => {
-                ticker.checked = false;
-                this.state?.dispatch?.(this.state);
-              }, checkedTimout * 60 * 1000);
+              if (checkedTimout) {
+                setTimeout(() => {
+                  ticker.checked = false;
+                  this.state?.dispatch?.(this.state);
+                }, checkedTimout * 60 * 1000);
+              }
             },
             remove: () => {
               this.state.remove(ticker);
             }
-            // remove: () => {
-            //   this.state.priceNearLevel = this.state.priceNearLevel.filter((t) => t.name !== ticker.name);
-            //   this.state.banned.push(ticker);
-            //   this.state?.dispatch?.(this.state);
-            //   setTimeout(() => {
-            //     this.state.banned = this.state.banned.filter((t) => t.name !== ticker.name);
-            //     this.state?.dispatch?.(this.state);
-            //   }, bannedTimout * 60 * 1000);
-            // }
           };
           this.state.priceNearLevel.push(ticker);
           this.state?.dispatch?.(this.state);
@@ -84,20 +72,6 @@ export class Lows {
         this.remove(line.price);
       });
   }
-
-  // addLowest = (price) => {
-  //   const high = this.create(price);
-  //   if (high) {
-  //     this.array = [high, ...this.array];
-  //   }
-  // }
-  //
-  // addHighest = (price) => {
-  //   const high = this.create(price);
-  //   if (high) {
-  //     this.array = [...this.array, high];
-  //   }
-  // }
 
   create = (price, interval, time) => {
     if (price) {

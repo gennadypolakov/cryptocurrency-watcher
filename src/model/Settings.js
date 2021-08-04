@@ -1,8 +1,8 @@
-import {bannedTimout, checkedTimout, last5mCount, minLevelAge, minOrderPercentage, orderTimeout, priceDistance, removeOrderPercentage, removeTimeout} from '../config';
+import {notificationTimeout, checkedTimout, last5mCount, minLevelAge, minOrderPercentage, orderTimeout, priceDistance, removeOrderPercentage, removeTimeout} from '../config';
 
 export class Settings {
 
-  bannedTimout;
+  notificationTimeout;
   checkedTimout;
   last5mCount;
   minLevelAge;
@@ -41,7 +41,7 @@ export class Settings {
     }
     if (!config) {
       config = {
-        bannedTimout,
+        notificationTimeout,
         checkedTimout,
         last5mCount,
         minLevelAge,

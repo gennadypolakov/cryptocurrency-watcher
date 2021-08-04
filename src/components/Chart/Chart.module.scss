@@ -1,6 +1,33 @@
 .chart {
     width: 620px;
-    height: 490px;
+    height: 520px;
     margin: 5px;
     border: solid 1px gray;
 }
+
+.header {
+    display: flex;
+    flex-flow: row nowrap;
+    padding: 5px;
+    justify-content: space-between;
+}
+
+.controls {
+    & > * {
+        margin-right: 10px;
+        color: gray;
+        cursor: pointer;
+
+        &:hover {
+            color: black;
+        }
+    }
+}
+//
+//.settingsIcon {
+//    cursor: pointer;
+//
+//    &:hover {
+//        color: black;
+//    }
+//}

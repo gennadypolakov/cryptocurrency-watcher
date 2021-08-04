@@ -1,17 +1,19 @@
-import {LineStyle} from 'lightweight-charts';
+import {BehaviorSubject} from 'rxjs';
 import {axiosSpot} from '../api';
-import {ask, bid, m5, minOrderPercentage, priceDistance, priceLine} from '../config';
+import {ask, bid} from '../config';
 import {Order} from './Order';
+import {ASK, BID} from '../constants';
 
 export class OrderBook {
 
   ask;
-  averageVolume;
   bid;
+  isTimeout;
   lastUpdateId;
   name;
   orderStream = [];
-  orders = {ask: {}, bid: {}};
+  orders = {[ASK]: {}, [BID]: {}};
+  orders$ = new BehaviorSubject({[ASK]: {}, [BID]: {}});
   series;
   state;
   stream;
@@ -28,16 +30,44 @@ export class OrderBook {
     if (this.name) this.createStream();
   }
 
+  closeStream = () => {
+    this.stream?.removeEventListener('message', this.onStreamMessage);
+    this.stream?.close();
+  }
+
+  convertStreamValue = (data, side) => {
+    let converted = {};
+    if (data?.length) {
+      converted = data.reduce((acc, current) => {
+        const price = Number(current[0]);
+        const volume = Number(current[1]);
+        if (!this[side]?.[price]) {
+          this[side][price] = new Order(side, price, volume, this);
+        }
+        acc[price] = volume;
+        return acc;
+      }, converted);
+    }
+    return converted;
+  };
+
   createStream = () => {
     this.stream = new WebSocket(`wss://stream.binance.com:9443/ws/${this.name.toLowerCase()}@depth@1000ms`);
     this.stream.onmessage = this.onStreamMessage;
+  };
+
+  enableTimeout = () => {
+    this.isTimeout = true;
+    setTimeout(() => {
+      this.isTimeout = false;
+    }, (this.ticker?.config?.notificationTimeout || 5) * 1000 * 60);
   };
 
   onStreamMessage = (e) => {
     if (e.data) {
       const update = JSON.parse(e.data);
       if (this.synced) {
-        this.updateOrderBook(update);
+        if (!this.isTimeout) this.updateOrderBook(update);
       } else {
         this.orderStream.push(update);
       }
@@ -64,6 +94,12 @@ export class OrderBook {
     }
   };
 
+  remove = () => {
+    this.closeStream();
+    if (this.ask) Object.keys(this.ask).forEach((price) => this.ask[price].remove());
+    if (this.bid) Object.keys(this.bid).forEach((price) => this.bid[price].remove());
+  }
+
   syncOrderBook = () => {
     if (this.orderStream?.length && this.lastUpdateId) {
       const updateId = this.orderStream.findIndex((u) => u.U <= this.lastUpdateId + 1 && u.u >= this.lastUpdateId + 1);
@@ -84,129 +120,15 @@ export class OrderBook {
   updateOrderBook = (update, first = false) => {
     if ((this.u && update?.U === this.u + 1) || first) {
       this.u = update?.u;
-      update?.a?.forEach((o) => {
-        const volume = Number(o[1]);
-        const price = Number(o[0]);
-        if (this.ask[price]) {
-          this.ask[price].update(volume);
-        } else {
-          this.ask[price] = new Order(ask, price, volume, this);
-        }
-      });
-      update?.b?.forEach((o) => {
-        const volume = Number(o[1]);
-        const price = Number(o[0]);
-        if (this.bid[price]) {
-          this.bid[price].update(volume);
-        } else {
-          this.bid[price] = new Order(bid, price, volume, this);
-        }
-      });
-    }
-    let lines = Object.keys(this.ask).filter((p) => this.ask[p].line).length;
-    if (lines > 1) {
-      console.log(this.name);
-      const data = this.ticker?.chartData?.[m5]?.array;
-      if (data?.length && data.length > 21) {
-        const last4 = data.slice(data.length - 21, data.length - 1)?.map((bar) => bar.volume);
-        console.log('last 21', last4);
-        const averageVolume4 = last4.reduce((acc, value) => acc + value, 0) / last4.length;
-        console.log('averageVolume 20', averageVolume4);
-        const last5 = data.slice(data.length - 5, data.length)?.map((bar) => bar.volume);
-        console.log('last 5', last5);
-        const averageVolume = last5.reduce((acc, value) => acc + value, 0) / last5.length;
-        console.log('averageVolume 5', averageVolume);
+      let ask = {};
+      let bid = {};
+      if (update?.a) {
+        ask = this.convertStreamValue(update.a, ASK);
       }
-    }
-    lines = Object.keys(this.bid).filter((p) => this.bid[p].line).length;
-    if (lines > 1) {
-      console.log(this.name);
-      const data = this.ticker?.chartData?.[m5]?.array;
-      if (data?.length && data.length > 20) {
-        const last4 = data.slice(data.length - 21, data.length - 1)?.map((bar) => bar.volume);
-        console.log('last 20', last4);
-        const averageVolume4 = last4.reduce((acc, value) => acc + value, 0) / last4.length;
-        console.log('averageVolume 20', averageVolume4);
-        const last5 = data.slice(data.length - 5, data.length)?.map((bar) => bar.volume);
-        console.log('last 5', last5);
-        const averageVolume = last5.reduce((acc, value) => acc + value, 0) / last5.length;
-        console.log('averageVolume 5', averageVolume);
+      if (update?.b) {
+        bid = this.convertStreamValue(update.b, BID);
       }
-    }
-  };
-
-  setOrderLines = () => {
-    // искать плотности больше чем 1/4 объема на 5 минутах
-    if (this.ask) {
-      let askPrices = Object.keys(this.ask).map((ask) => Number(ask)).sort((a, b) => a - b);
-      const bestAsk = askPrices[0];
-      let volumes;
-      this.averageVolume = this.ticker.averageVolume;
-      if (this.averageVolume) {
-        volumes = askPrices
-          .filter((price) => (price - bestAsk) / bestAsk < priceDistance && this.ask[price] > this.averageVolume * minOrderPercentage)
-          .map((price) => [price, this.ask[price]]);
-      } else {
-        askPrices = askPrices
-          .filter((price) => (price - bestAsk) / bestAsk < priceDistance)
-          .sort((a, b) => this.ask[b] - this.ask[a]);
-        volumes = [askPrices[0], this.ask[askPrices[0]]];
-      }
-      const orders = this.orders.ask;
-      if (this.series) {
-        if (orders) {
-          Object.keys(orders).forEach((price) => {
-            this.series.removePriceLine(orders[price]);
-            delete orders[price];
-          });
-        }
-        volumes?.forEach((volume) => {
-          orders[volume[0]] = this.series.createPriceLine({
-            ...priceLine,
-            color: '#107b00',
-            lineStyle: LineStyle.Solid,
-            axisLabelVisible: true,
-            price: volume[0],
-            lineWidth: 1,
-            title: volume[1]
-          });
-        });
-      }
-    }
-    if (this.bid) {
-      let bidPrices = Object.keys(this.bid).map((bid) => Number(bid)).sort((a, b) => b - a);
-      const bestBid = bidPrices[0];
-      let volumes;
-      if (this.averageVolume) {
-        volumes = bidPrices
-          .filter((price) => (bestBid - price) / bestBid < priceDistance && this.bid[price] > this.averageVolume * minOrderPercentage)
-          .map((price) => [price, this.bid[price]]);
-      } else {
-        bidPrices = bidPrices
-          .filter((price) => (bestBid - price) / bestBid < priceDistance)
-          .sort((a, b) => this.bid[b] - this.bid[a]);
-        volumes = [bidPrices[0], this.bid[bidPrices[0]]];
-      }
-      const orders = this.orders.bid;
-      if (this.series) {
-        if (orders) {
-          Object.keys(orders).forEach((price) => {
-            this.series.removePriceLine(orders[price]);
-            delete orders[price];
-          });
-        }
-        volumes?.forEach((volume) => {
-          orders[volume[0]] = this.series.createPriceLine({
-            ...priceLine,
-            color: '#107b00',
-            lineStyle: LineStyle.Solid,
-            axisLabelVisible: true,
-            price: volume[0],
-            lineWidth: 1,
-            title: volume[1]
-          });
-        });
-      }
+      this.orders$.next({ask, bid});
     }
   };
 

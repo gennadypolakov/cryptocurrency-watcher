@@ -7,6 +7,7 @@ import {useEffect, useState} from 'react';
 export const Settings = (props) => {
   const {state, name} = props;
   const [config, setConfig] = useState();
+  const [disabled, setDisabled] = useState(true);
 
   const setStateConfig = (name) => {
     if (name) {
@@ -34,6 +35,7 @@ export const Settings = (props) => {
     } else if (state.config) {
       state.config.update(newConfig);
     }
+    setDisabled(true);
     state?.dispatch?.(state);
   };
 
@@ -42,6 +44,7 @@ export const Settings = (props) => {
       <Form
         initialValues={config}
         onFinish={onFinish}
+        onFieldsChange={() => setDisabled(false)}
       >
         <Form.Item name="priceDistance">
           <Input
@@ -73,6 +76,16 @@ export const Settings = (props) => {
             }
           />
         </Form.Item>
+        <Form.Item name="orderTimeout">
+          <Input
+            addonBefore="Таймаут лимитного ордера"
+            suffix={
+              <Tooltip title="Если ордер старше указанного количества минут, он отобразится на графике (возможны дробные значения через точку)">
+                <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+              </Tooltip>
+            }
+          />
+        </Form.Item>
         <Form.Item name="last5mCount">
           <Input
             addonBefore="Количество 5-минуток для среднего объема"
@@ -83,9 +96,9 @@ export const Settings = (props) => {
             }
           />
         </Form.Item>
-        <Form.Item name="bannedTimout">
+        <Form.Item name="notificationTimeout">
           <Input
-            addonBefore="Продолжительность бана монеты"
+            addonBefore="Таймаут уведомлений в минутах"
             suffix={
               <Tooltip title="Время в минутах, в течение которого не уведомлять о выключенной монете">
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
@@ -94,7 +107,7 @@ export const Settings = (props) => {
           />
         </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" htmlType="submit" disabled={disabled}>
             Сохранить
           </Button>
         </Form.Item>

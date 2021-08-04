@@ -1,5 +1,6 @@
 export class Bar {
-  i; // array index
+
+  i; // index
   interval; // timeframe
   open;
   high;

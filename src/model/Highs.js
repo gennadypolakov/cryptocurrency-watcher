@@ -1,4 +1,4 @@
-import {checkedTimout, d1, h1, lineWidths, m5, minLevelAge, priceDistance} from '../config';
+import {d1, lineWidths, m5} from '../config';
 import {Line} from './Line';
 
 const options = {
@@ -16,19 +16,18 @@ export class Highs {
   array = [];
   map = {};
   series;
-  first; // объект
-  firstD1; // объект
-  last; // объект
-  newHigh; // цена
   state;
+  ticker;
 
-  constructor(name, series, state) {
-    this.series = series;
-    this.state = state;
-    this.name = name;
+  constructor(ticker) {
+    this.ticker = ticker;
+    this.series = ticker?.series;
+    this.state = ticker?.state;
+    this.name = ticker?.name;
   }
 
   check = (price, time) => {
+    const {checkedTimout, minLevelAge, priceDistance} = this.ticker?.config || {};
     if (this.array[0]?.price) {
       if (this.array[0].price < price) {
         this.removeLowerHighs(price);
@@ -36,8 +35,9 @@ export class Highs {
           this.createNew(price, m5, time);
         }
       } else if (
+        priceDistance &&
         !this.state.banned[this.name] &&
-        Date.now() - this.array[0].time > 1000 * 60 * 60 * minLevelAge &&
+        (!minLevelAge || Date.now() - this.array[0].time > 1000 * 60 * 60 * minLevelAge) &&
         this.array[0].price > price &&
         (this.array[0].price - price) / price < priceDistance
       ) {
@@ -47,25 +47,17 @@ export class Highs {
             checked: false,
             click: () => {
               ticker.checked = true;
-              console.log(ticker);
               this.state?.dispatch?.(this.state);
-              setTimeout(() => {
-                ticker.checked = false;
-                this.state?.dispatch?.(this.state);
-              }, checkedTimout * 60 * 1000);
+              if (checkedTimout) {
+                setTimeout(() => {
+                  ticker.checked = false;
+                  this.state?.dispatch?.(this.state);
+                }, checkedTimout * 60 * 1000);
+              }
             },
             remove: () => {
               this.state.remove(ticker);
             }
-            // remove: () => {
-            //   this.state.priceNearLevel = this.state.priceNearLevel.filter((t) => t.name !== ticker.name);
-            //   this.state.banned.push(ticker);
-            //   this.state?.dispatch?.(this.state);
-            //   setTimeout(() => {
-            //     this.state.banned = this.state.banned.filter((t) => t.name !== ticker.name);
-            //     this.state?.dispatch?.(this.state);
-            //   }, bannedTimout * 60 * 1000);
-            // }
           };
           this.state.priceNearLevel.push(ticker);
           this.state?.dispatch?.(this.state);
@@ -80,20 +72,6 @@ export class Highs {
         this.remove(line.price);
       });
   }
-
-  // addLowest = (price) => {
-  //   const high = this.create(price);
-  //   if (high) {
-  //     this.array = [high, ...this.array];
-  //   }
-  // }
-  //
-  // addHighest = (price) => {
-  //   const high = this.create(price);
-  //   if (high) {
-  //     this.array = [...this.array, high];
-  //   }
-  // }
 
   create = (price, interval, time) => {
     if (price) {
