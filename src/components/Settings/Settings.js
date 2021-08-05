@@ -11,11 +11,11 @@ export const Settings = (props) => {
 
   const setStateConfig = (name) => {
     if (name) {
-      if (state?.tickers?.[name]?.config) {
-        setConfig({...state.tickers[name].config});
+      if (state?.tickers?.[name]?.config.map) {
+        setConfig({...state.tickers[name].config.map});
       }
-    } else if (state.config) {
-      setConfig({...state.config});
+    } else if (state.config.map) {
+      setConfig({...state.config.map});
     }
   };
 
@@ -48,9 +48,9 @@ export const Settings = (props) => {
       >
         <Form.Item name="priceDistance">
           <Input
-            addonBefore="Расстояние до уровня"
+            addonBefore="Расстояние до уровня или ордера"
             suffix={
-              <Tooltip title="Минимальное расстояние от текущей цены до ближайшего часового или дневного уровня в долях от единицы, чтоб сработало уведомление">
+              <Tooltip title="Минимальное расстояние от текущей цены до ближайшего часового или дневного уровня или лимитного ордера в долях от единицы, чтоб сработало уведомление">
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }

@@ -7,5 +7,6 @@ export const H1 = '1h';
 export const D1 = '1d';
 export const LEVEL_COLOR = '#9912be';
 export const CROSSED_LEVEL_COLOR = '#979797';
-export const ORDER_COLOR = '#107b00';
+export const ASK_ORDER_COLOR = '#7b0000';
+export const BID_ORDER_COLOR = '#107b00';
 export const barPrices = ['open', 'high', 'low', 'close'];

@@ -1,89 +1,146 @@
-import {notificationTimeout, checkedTimout, last5mCount, minLevelAge, minOrderPercentage, orderTimeout, priceDistance, removeOrderPercentage, removeTimeout} from '../config';
+import {
+  checkedTimout,
+  last5mCount,
+  minLevelAge,
+  minOrderPercentage,
+  notificationTimeout,
+  orderTimeout,
+  priceDistance,
+  removeOrderPercentage,
+  removeTimeout
+} from '../config';
+import {BehaviorSubject} from 'rxjs';
 
 export class Settings {
 
-  notificationTimeout;
-  checkedTimout;
-  last5mCount;
-  minLevelAge;
-  minOrderPercentage;
-  orderTimeout;
-  priceDistance;
-  removeOrderPercentage;
-  removeTimeout;
+  map = {
+    checkedTimout,
+    last5mCount,
+    minLevelAge,
+    minOrderPercentage,
+    notificationTimeout,
+    orderTimeout,
+    priceDistance,
+    removeOrderPercentage,
+    removeTimeout
+  };
+  configSubscription;
+  isDefault = true;
   state;
   ticker; // string
   tickers; // {name: string, active: boolean}
 
+  config$;
+
+  get notificationTimeout() {
+    return this.map.notificationTimeout;
+  };
+  set notificationTimeout(v){
+    this.map.notificationTimeout = v;
+  };
+
+  get checkedTimout() {
+    return this.map.checkedTimout;
+  };
+  set checkedTimout(v){
+    this.map.checkedTimout = v;
+  };
+
+  get last5mCount() {
+    return this.map.last5mCount;
+  };
+  set last5mCount(v){
+    this.map.last5mCount = v;
+  };
+
+  get minLevelAge() {
+    return this.map.minLevelAge;
+  };
+  set minLevelAge(v){
+    this.map.minLevelAge = v;
+  };
+
+  get minOrderPercentage() {
+    return this.map.minOrderPercentage;
+  };
+  set minOrderPercentage(v){
+    this.map.minOrderPercentage = v;
+  };
+
+  get orderTimeout() {
+    return this.map.orderTimeout;
+  };
+  set orderTimeout(v){
+    this.map.orderTimeout = v;
+  };
+
+  get priceDistance() {
+    return this.map.priceDistance;
+  };
+  set priceDistance(v){
+    this.map.priceDistance = v;
+  };
+
+  get removeOrderPercentage() {
+    return this.map.removeOrderPercentage;
+  };
+  set removeOrderPercentage(v){
+    this.map.removeOrderPercentage = v;
+  };
+
+  get removeTimeout() {
+    return this.map.removeTimeout;
+  };
+  set removeTimeout(v){
+    this.map.removeTimeout = v;
+  };
+
+
   constructor(state, ticker) {
     this.state = state;
-    if (ticker) this.ticker = ticker;
+    if (ticker) {
+      this.ticker = ticker;
+      this.configSubscription = this.state?.config?.config$?.subscribe(this.updateStream);
+    } else {
+      this.tickers = JSON.parse(localStorage.getItem('tickers')) || {};
+      this.config$ = new BehaviorSubject(null);
+    }
     this.setConfig(ticker);
   }
 
   setConfig = (ticker) => {
-    let config;
-    const configJson = localStorage.getItem(ticker ?? 'config')
+    const configJson = localStorage.getItem(ticker || 'config')
     if (configJson) {
-      config = JSON.parse(configJson);
-    } else if (ticker && this.state.config) {
-      config = {};
-      Object.keys(this.state.config).forEach((name) => {
-        if (
-          name !== 'tickers' &&
-          this.state.config[name] !== undefined &&
-          typeof this.state.config[name] !== 'function'
-        ) {
-          config[name] = this.state.config[name];
-        }
-      });
-      if (!Object.keys(config).length) config = undefined;
+      this.isDefault = false;
+      this.map = JSON.parse(configJson);
+    } else if (ticker) {
+      this.map = {...this.state.config.map};
     }
-    if (!config) {
-      config = {
-        notificationTimeout,
-        checkedTimout,
-        last5mCount,
-        minLevelAge,
-        minOrderPercentage,
-        orderTimeout,
-        priceDistance,
-        removeOrderPercentage,
-        removeTimeout
-      };
-    }
-    Object.keys(config).forEach((k) => {
-      this[k] = config[k];
-    });
   };
 
   save = () => {
-    const config = {};
-    Object.keys(this)
-      .forEach((name) => {
-        if (
-          name !== 'state' &&
-          this[name] !== undefined &&
-          typeof this[name] !== 'function'
-        ) {
-          config[name] = this[name];
-        }
-      });
-    localStorage.setItem(this.ticker ?? 'config', JSON.stringify(config));
+    localStorage.setItem(this.ticker || 'config', JSON.stringify(this.map));
+    if (this.tickers) {
+      localStorage.setItem('tickers', JSON.stringify(this.tickers));
+    }
   };
 
   update = (config) => {
-    Object.keys(config)
-      .forEach((name) => {
-        if (
-          name !== 'state' &&
-          config[name] !== undefined &&
-          typeof config[name] !== 'function'
-        ) {
-          this[name] = config[name];
-        }
-      });
-    this.save();
+    if (config) {
+      if (this.ticker) {
+        this.isDefault = false;
+      } else {
+        this.config$?.next(config);
+      }
+      this.map = {...config};
+      this.save();
+    }
+  };
+
+  updateStream = (config) => {
+    if (config && this.isDefault) {
+      this.map = {...config};
+    }
   };
 
 }

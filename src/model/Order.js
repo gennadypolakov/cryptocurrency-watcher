@@ -1,6 +1,11 @@
 import {ask, bid, priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
-import {ASK, ORDER_COLOR} from '../constants';
+import {ASK, ASK_ORDER_COLOR, BID, BID_ORDER_COLOR} from '../constants';
+
+const orderColors = {
+  [ASK]: ASK_ORDER_COLOR,
+  [BID]: BID_ORDER_COLOR,
+};
 
 export class Order {
 
@@ -110,10 +115,15 @@ export class Order {
   };
 
   createLine = () => {
-    if (this.ticker?.series) {
+    if (
+      this.side &&
+      this.price &&
+      this.volume &&
+      this.ticker?.series
+    ) {
       this.line = this.ticker.series.createPriceLine({
         ...priceLine,
-        color: ORDER_COLOR,
+        color: orderColors[this.side],
         lineStyle: LineStyle.Solid,
         axisLabelVisible: true,
         price: this.price,

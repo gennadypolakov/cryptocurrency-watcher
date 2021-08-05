@@ -3,8 +3,6 @@ import {createChart} from 'lightweight-charts';
 import {getSymbolChartData} from '../api';
 import {chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
-import {Highs} from './Highs';
-import {Lows} from './Lows';
 import {Settings} from './Settings';
 import {BehaviorSubject} from 'rxjs';
 import {barPrices, HIGH, LOW} from '../constants';
@@ -63,8 +61,6 @@ export class Ticker {
       } else {
         this.getChartData(m5);
       }
-      this.highs = new Highs(this);
-      this.lows = new Lows(this);
       this.orderBook = new OrderBook(this);
     }
   };
@@ -72,6 +68,7 @@ export class Ticker {
   disable = () => {
     if (this.state.config.tickers[this.name]) {
       this.state.config.tickers[this.name].isActive = false;
+      this.config?.configSubscription?.unsubscribe();
       this.closeStream();
       this.orderBook?.remove();
       this.price$.next(-1);
@@ -180,7 +177,7 @@ export class Ticker {
       });
       this.chart.applyOptions({
         timeScale: {
-          rightOffset: 10,
+          rightOffset: 20,
           timeVisible: true,
         },
       });
@@ -219,7 +216,6 @@ export class Ticker {
               ticker: this,
               time: currentHigh[1],
             });
-            // this.highs.create(currentHigh[0], interval, currentHigh[1]);
             highCreated = true;
           }
           if (low < currentLow[0]) {
@@ -233,7 +229,6 @@ export class Ticker {
               ticker: this,
               time: currentLow[1],
             });
-            // this.lows.create(currentLow[0], interval, currentLow[1]);
             lowCreated = true;
           }
         }

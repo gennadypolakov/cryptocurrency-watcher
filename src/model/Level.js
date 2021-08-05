@@ -28,65 +28,6 @@ export class Level {
     }
   }
 
-  setLevel = () => {
-    this.createLine();
-    if (this.price && this.ticker?.levels) {
-      this.ticker.levels[this.price] = this;
-    }
-    if (this.ticker?.price$) {
-      this.subscription = this.ticker.price$.subscribe(this.onPrice);
-    }
-  }
-
-  destroy = () => {
-    this.subscription?.unsubscribe();
-    if (this.line) this.ticker?.series?.removePriceLine(this.line);
-    if (this.price && this.ticker?.levels?.[this.price]) {
-      delete this.ticker.levels[this.price];
-    }
-  };
-
-  createLine = () => {
-    this.line = this.ticker?.series?.createPriceLine({
-      ...priceLine,
-      color: LEVEL_COLOR,
-      lineStyle: this.interval === M5 ? LineStyle.Dashed : LineStyle.Solid,
-      axisLabelVisible: true,
-      price: this.price,
-      lineWidth: lineWidths[this.interval] || 1
-    });
-  };
-
-  onPrice = (price) => {
-    if (price) {
-      if (price === -1) this.destroy();
-      else this.check(price);
-    }
-  };
-
-  checkLevelOnPrice = () => {
-    const existing = this.ticker?.levels?.[this.price];
-    let removeExisting = false;
-    const {interval, time} = this;
-    if (existing) {
-      if (interval && existing.interval) {
-        if (interval === existing.interval) {
-          if (time && existing.time && time < existing.time) {
-            removeExisting = true;
-          }
-        } else if (interval === d1) {
-          removeExisting = true;
-        }
-      }
-      if (removeExisting) {
-        existing.destroy();
-        this.setLevel();
-      }
-    } else {
-      this.setLevel();
-    }
-  };
-
   check = (update) => {
     const price = update[this.side];
     const {minLevelAge = 0, priceDistance = 1} = this.ticker?.config || {};
@@ -114,5 +55,64 @@ export class Level {
       }
     }
   };
+
+  checkLevelOnPrice = () => {
+    const existing = this.ticker?.levels?.[this.price];
+    let removeExisting = false;
+    const {interval, time} = this;
+    if (existing) {
+      if (interval && existing.interval) {
+        if (interval === existing.interval) {
+          if (time && existing.time && time < existing.time) {
+            removeExisting = true;
+          }
+        } else if (interval === d1) {
+          removeExisting = true;
+        }
+      }
+      if (removeExisting) {
+        existing.destroy();
+        this.setLevel();
+      }
+    } else {
+      this.setLevel();
+    }
+  };
+
+  createLine = () => {
+    this.line = this.ticker?.series?.createPriceLine({
+      ...priceLine,
+      color: LEVEL_COLOR,
+      lineStyle: this.interval === M5 ? LineStyle.Dashed : LineStyle.Solid,
+      axisLabelVisible: true,
+      price: this.price,
+      lineWidth: lineWidths[this.interval] || 1
+    });
+  };
+
+  destroy = () => {
+    this.subscription?.unsubscribe();
+    if (this.line) this.ticker?.series?.removePriceLine(this.line);
+    if (this.price && this.ticker?.levels?.[this.price]) {
+      delete this.ticker.levels[this.price];
+    }
+  };
+
+  onPrice = (price) => {
+    if (price) {
+      if (price === -1) this.destroy();
+      else this.check(price);
+    }
+  };
+
+  setLevel = () => {
+    this.createLine();
+    if (this.price && this.ticker?.levels) {
+      this.ticker.levels[this.price] = this;
+    }
+    if (this.ticker?.price$) {
+      this.subscription = this.ticker.price$.subscribe(this.onPrice);
+    }
+  }
 
 }

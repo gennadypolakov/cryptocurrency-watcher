@@ -79,9 +79,6 @@ export class State {
           this.futures = {};
           this.tickers = {};
           this.tickerNames = [];
-          if (!this.config.tickers) {
-            this.config.tickers = {};
-          }
           data.forEach((symbol) => {
             if (symbol.symbol && this.spot[symbol.symbol] && symbol.contractType === 'PERPETUAL') {
               this.futures[symbol.symbol] = symbol;
