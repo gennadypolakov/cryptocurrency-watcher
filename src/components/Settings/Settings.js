@@ -1,13 +1,19 @@
 import {InfoCircleOutlined} from '@ant-design/icons';
 import {Button, Form, Input, Tooltip} from 'antd';
+import {isEqual} from 'lodash';
 
 import s from './Settings.module.scss';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
+import {defaultConfig} from '../../model/Settings';
 
 export const Settings = (props) => {
   const {state, name} = props;
   const [config, setConfig] = useState();
   const [disabled, setDisabled] = useState(true);
+  const [resetDisabled, setResetDisabled] = useState(false);
+  const formRef = useRef();
+
+  const tickerConfig = name ? state.tickers[name].config.map : null;
 
   const setStateConfig = (name) => {
     if (name) {
@@ -18,6 +24,14 @@ export const Settings = (props) => {
       setConfig({...state.config.map});
     }
   };
+
+  useEffect(() => {
+    if (name) {
+      setResetDisabled(isEqual(state.config.map, state.tickers[name].config.map));
+    } else {
+      setResetDisabled(isEqual(state.config.map, defaultConfig));
+    }
+  }, [state.config.map, tickerConfig]);
 
   useEffect(() => {
     if (!config) {
@@ -39,9 +53,28 @@ export const Settings = (props) => {
     state?.dispatch?.(state);
   };
 
+  const reset = () => {
+    let newConfig;
+    if (name) {
+      state.tickers[name]?.config?.reset();
+      newConfig = state.tickers[name]?.config?.map;
+    } else {
+      state.config?.reset();
+      newConfig = state.config?.map;
+    }
+    if (newConfig) {
+      setConfig(newConfig);
+      if (formRef.current) {
+        formRef.current.setFieldsValue(newConfig);
+      }
+    }
+    state?.dispatch?.(state);
+  };
+
   return config ? (
     <div className={s.settings}>
       <Form
+        ref={formRef}
         initialValues={config}
         onFinish={onFinish}
         onFieldsChange={() => setDisabled(false)}
@@ -107,8 +140,21 @@ export const Settings = (props) => {
           />
         </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit" disabled={disabled}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            disabled={disabled}
+            className={s.button}
+          >
             Сохранить
+          </Button>
+          <Button
+            type="default"
+            onClick={reset}
+            disabled={resetDisabled}
+            className={s.button}
+          >
+            Сбросить
           </Button>
         </Form.Item>
       </Form>

@@ -1,18 +1,15 @@
 import {BehaviorSubject} from 'rxjs';
 import {axiosSpot} from '../api';
-import {ask, bid} from '../config';
 import {Order} from './Order';
 import {ASK, BID} from '../constants';
 
 export class OrderBook {
 
-  ask;
-  bid;
   isTimeout;
   lastUpdateId;
   name;
   orderStream = [];
-  orders = {[ASK]: {}, [BID]: {}};
+  orders;
   orders$ = new BehaviorSubject({[ASK]: {}, [BID]: {}});
   series;
   state;
@@ -71,20 +68,19 @@ export class OrderBook {
       } else {
         this.orderStream.push(update);
       }
-      if (!this.ask && !this.bid) {
-        this.ask = {};
-        this.bid = {};
+      if (!this.orders) {
+        this.orders = {};
         axiosSpot.get('/api/v3/depth', {params: {symbol: this.name, limit: 1000}}).then((data) => {
           if (data.data) {
-            data.data.asks.forEach((o) => {
+            data.data.asks?.forEach((o) => {
               const price = Number(o[0]);
               const volume = Number(o[1]);
-              this.ask[price] = new Order(ask, price, volume, this);
+              this.orders[price] = new Order(ASK, price, volume, this);
             });
-            data.data.bids.forEach((o) => {
+            data.data.bids?.forEach((o) => {
               const price = Number(o[0]);
               const volume = Number(o[1]);
-              this.bid[price] = new Order(bid, price, volume, this);
+              this.orders[price] = new Order(BID, price, volume, this);
             });
             this.lastUpdateId = data.data.lastUpdateId;
             this.syncOrderBook();
@@ -96,8 +92,7 @@ export class OrderBook {
 
   remove = () => {
     this.closeStream();
-    if (this.ask) Object.keys(this.ask).forEach((price) => this.ask[price].remove());
-    if (this.bid) Object.keys(this.bid).forEach((price) => this.bid[price].remove());
+    if (this.orders) Object.keys(this.orders).forEach((price) => this.orders[price].remove());
   }
 
   syncOrderBook = () => {
@@ -120,15 +115,24 @@ export class OrderBook {
   updateOrderBook = (update, first = false) => {
     if ((this.u && update?.U === this.u + 1) || first) {
       this.u = update?.u;
-      let ask = {};
-      let bid = {};
-      if (update?.a) {
-        ask = this.convertStreamValue(update.a, ASK);
-      }
-      if (update?.b) {
-        bid = this.convertStreamValue(update.b, BID);
-      }
-      this.orders$.next({ask, bid});
+      update?.a?.forEach((order) => {
+        const price = Number(order[0]);
+        const volume = Number(order[1]);
+        if (this.orders?.[price]) {
+          this.orders[price].update(volume, ASK);
+        } else {
+          this.orders[price] = new Order(ASK, price, volume, this);
+        }
+      });
+      update?.b?.forEach((order) => {
+        const price = Number(order[0]);
+        const volume = Number(order[1]);
+        if (this.orders?.[price]) {
+          this.orders[price].update(volume, BID);
+        } else {
+          this.orders[price] = new Order(BID, price, volume, this);
+        }
+      });
     }
   };
 

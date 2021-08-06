@@ -43,7 +43,7 @@ export const CommonSettings = (props) => {
     if (state.events[ticker]?.level) {
       const levelMap = state.events[ticker].level;
       const levels = Object.keys(levelMap).map((price) => levelMap[price]);
-      return levels.map((level) => <div>Уровень: цена {level.price}, интервал {level.interval}</div>)
+      return levels.map((level) => <div key={level.price}>Уровень: цена {level.price}, интервал {level.interval}</div>)
     }
     return null;
   };
@@ -55,7 +55,7 @@ export const CommonSettings = (props) => {
         .sort((a, b) => b - a)
         .map((price) => orderMap[price])
         .filter((o) => o.volume);
-      return orders.map((order) => <div>Лимитный ордер: цена {order.price}, объем {order.volume}</div>)
+      return orders.map((order) => <div key={order.price}>Лимитный ордер: цена {order.price}, объем {order.volume}</div>)
     }
     return null;
   };

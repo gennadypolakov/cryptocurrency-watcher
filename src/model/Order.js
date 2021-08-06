@@ -1,4 +1,4 @@
-import {ask, bid, priceLine} from '../config';
+import {priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
 import {ASK, ASK_ORDER_COLOR, BID, BID_ORDER_COLOR} from '../constants';
 
@@ -19,6 +19,8 @@ export class Order {
   volume;
   side; // ask | bid
   subscription;
+  config$;
+  configSubscription;
 
   constructor(side, price, volume, orderBook) {
     this.orderBook = orderBook;
@@ -28,6 +30,7 @@ export class Order {
     this.updatedAt = Date.now();
     this.volume = volume;
     this.subscription = this.orderBook?.orders$?.subscribe(this.next);
+    this.configSubscription = this.ticker?.config?.config$?.subscribe(this.configStream);
   }
 
   next = (orderBook) => {
@@ -43,93 +46,86 @@ export class Order {
     }
   }
 
+  configStream = (config) => {
+    if (config?.action === this.ticker.name) {
+      if (config.type === 'destroy') {
+
+      } else {
+        this.check();
+      }
+    }
+  };
+
   check = (second = false) => {
-    const {minOrderPercentage, orderTimeout, priceDistance, removeOrderPercentage, removeTimeout} = this.ticker?.config || {};
+    const {minOrderPercentage, orderTimeout, priceDistance} = this.ticker?.config || {};
     const {averageVolume, isTimeout, price} = this.ticker || {};
-    if (!isTimeout) {
-      if (this.price && this.side && price) {
+    if (this.price && this.side && price) {
+      if (this.volume >= averageVolume * minOrderPercentage) {
         const absDelta = this.side === ASK ? this.price - price : price - this.price;
         if (absDelta > 0) {
           if (absDelta / price < (priceDistance || 0)) {
-            if (averageVolume && minOrderPercentage && this.volume) {
-              if (this.volume >= averageVolume * minOrderPercentage) {
-                if (second) {
-                  this.removeLine();
-                  this.createLine();
-                  this.ticker?.state?.events$?.next(this);
-                } else {
-                  if (orderTimeout) {
-                    this.timeoutId = setTimeout(() => {
-                      this.check(true);
-                    }, orderTimeout * 60 * 1000);
-                  }
-                }
-              } else {
-                this.removeLine();
+            if (second) {
+              this.createLine();
+              if (!isTimeout) this.ticker?.state?.events$?.next(this);
+            } else {
+              this.updateLine();
+              if (orderTimeout) {
+                this.timeoutId = setTimeout(() => {
+                  this.check(true);
+                }, orderTimeout * 60 * 1000);
               }
             }
           } else {
             this.removeLine();
           }
         } else if (absDelta < 0) {
-          if (
-            removeOrderPercentage &&
-            (-1 * absDelta) / this.price > removeOrderPercentage
-          ) {
-            this.remove();
-          } else if (removeTimeout) {
-            if (this.removeTimeoutId) clearTimeout(this.removeTimeoutId);
-            this.removeTimeoutId = setTimeout(this.check, removeTimeout * 60 * 1000);
-          }
+          this.removeLine();
         }
+      } else {
+        this.removeLine();
       }
     }
   };
 
-  checkPrice = () => {
-    const {removeOrderPercentage, removeTimeout} = this.ticker?.config || {};
-    if (
-      removeOrderPercentage &&
-      this.price &&
-      this.ticker.price &&
-      (
-        (this.side === ask && this.price < this.ticker.price) ||
-        (this.side === bid && this.price > this.ticker.price)
-      ) &&
-      Math.abs(this.ticker.price - this.price) / this.price > removeOrderPercentage
-    ) {
-      this.remove();
-    } else if (removeTimeout) {
-      if (this.removeTimeoutId) clearTimeout(this.removeTimeoutId);
-      this.removeTimeoutId = setTimeout(this.checkPrice, removeTimeout * 60 * 1000);
-    }
-  };
-
-  update = (volume) => {
+  update = (volume, side) => {
     if (volume) {
       this.volume = volume;
+      this.side = side;
       this.check();
     } else {
       this.remove();
     }
   };
 
+  updateLine = () => {
+    if (this.line && this.side && this.volume) {
+      this.line?.applyOptions({
+        color: orderColors[this.side],
+        title: this.volume
+      });
+    }
+  };
+
+
   createLine = () => {
     if (
       this.side &&
       this.price &&
-      this.volume &&
-      this.ticker?.series
+      this.volume
     ) {
-      this.line = this.ticker.series.createPriceLine({
-        ...priceLine,
-        color: orderColors[this.side],
-        lineStyle: LineStyle.Solid,
-        axisLabelVisible: true,
-        price: this.price,
-        lineWidth: 1,
-        title: this.volume
-      });
+      if (this.line) {
+        this.updateLine();
+      } else {
+        this.line = this.ticker?.series?.createPriceLine({
+          ...priceLine,
+          color: orderColors[this.side],
+          lineStyle: LineStyle.Solid,
+          axisLabelVisible: true,
+          price: this.price,
+          lineWidth: 1,
+          title: this.volume
+        });
+      }
     }
 
   };
@@ -137,9 +133,10 @@ export class Order {
   remove = () => {
     if (this.removeTimeoutId) clearTimeout(this.removeTimeoutId);
     this.removeLine();
-    if (this.side && this.price && this.orderBook?.[this.side]?.[this.price]) {
-      delete this.orderBook[this.side][this.price];
+    if (this.side && this.price && this.orderBook?.orders?.[this.price]) {
+      delete this.orderBook.orders[this.price];
     }
+    this.configSubscription?.unsubscribe();
     this.subscription?.unsubscribe();
   };
 
@@ -147,6 +144,7 @@ export class Order {
     if (this.line && this.ticker?.series) {
       this.ticker.series.removePriceLine(this.line);
     }
+    this.line = null;
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       delete this.timeoutId;

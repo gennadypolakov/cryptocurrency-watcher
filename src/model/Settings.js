@@ -11,19 +11,21 @@ import {
 } from '../config';
 import {BehaviorSubject} from 'rxjs';
 
+export const defaultConfig = {
+  checkedTimout,
+  last5mCount,
+  minLevelAge,
+  minOrderPercentage,
+  notificationTimeout,
+  orderTimeout,
+  priceDistance,
+  removeOrderPercentage,
+  removeTimeout
+};
+
 export class Settings {
 
-  map = {
-    checkedTimout,
-    last5mCount,
-    minLevelAge,
-    minOrderPercentage,
-    notificationTimeout,
-    orderTimeout,
-    priceDistance,
-    removeOrderPercentage,
-    removeTimeout
-  };
+  map = {...defaultConfig};
   configSubscription;
   isDefault = true;
   state;
@@ -103,10 +105,23 @@ export class Settings {
       this.configSubscription = this.state?.config?.config$?.subscribe(this.updateStream);
     } else {
       this.tickers = JSON.parse(localStorage.getItem('tickers')) || {};
-      this.config$ = new BehaviorSubject(null);
     }
+    this.config$ = new BehaviorSubject(null);
     this.setConfig(ticker);
   }
+
+  reset = () => {
+    localStorage.removeItem(this.ticker || 'config');
+    if (this.ticker) {
+      this.map = {...this.state.config.map};
+    } else {
+      this.map = {...defaultConfig};
+    }
+    this.config$?.next({
+      ...this.map,
+      action: this.ticker || 'reset'
+    });
+  };
 
   setConfig = (ticker) => {
     const configJson = localStorage.getItem(ticker || 'config')
@@ -127,19 +142,23 @@ export class Settings {
 
   update = (config) => {
     if (config) {
+      const {action, ...rest} = config;
+      this.map = rest;
+      if (!action) this.save();
+      const streamValue = {...rest};
       if (this.ticker) {
-        this.isDefault = false;
+        streamValue.action = this.ticker;
       } else {
-        this.config$?.next(config);
+        streamValue.action = 'update';
       }
-      this.map = {...config};
-      this.save();
+      this.config$?.next(streamValue);
     }
   };
 
   updateStream = (config) => {
-    if (config && this.isDefault) {
-      this.map = {...config};
+    if (config) {
+      const action = config.action;
+      if (action) this[action]?.(config);
     }
   };
 
