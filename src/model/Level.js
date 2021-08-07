@@ -1,4 +1,4 @@
-import {CROSSED_LEVEL_COLOR, HIGH, LEVEL_COLOR, LOW, M5} from '../constants';
+import {CROSSED_LEVEL_COLOR, D1, H1, HIGH, LEVEL_COLOR, LOW, M5} from '../constants';
 import {d1, lineWidths, priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
 
@@ -59,6 +59,9 @@ export class Level {
   checkLevelOnPrice = () => {
     const existing = this.ticker?.levels?.[this.price];
     let removeExisting = false;
+    if (this.interval === D1 && this.time > Date.now() - 1000 * 60 * 60 * 24) {
+      this.interval = H1
+    }
     const {interval, time} = this;
     if (existing) {
       if (interval && existing.interval) {

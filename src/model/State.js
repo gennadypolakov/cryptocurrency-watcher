@@ -1,18 +1,20 @@
 import {getFuturesExchangeInfo, getSpotExchangeInfo} from '../api';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {set} from 'lodash';
 
 import {Ticker} from './Ticker';
 import {Settings} from './Settings';
 import {Level} from './Level';
 import {Order} from './Order';
+import {apiTimeout} from '../config';
 
 export class State {
+  apiTimeout;
   banned = {}; //{name: string, checked: boolean}
   config;
   events = {};
   eventTickers;
-  events$ = new BehaviorSubject(null);
+  events$ = new Subject();
   futures;
   priceNearLevel = []; //{name: string, checked: boolean}
   spot;
@@ -56,67 +58,91 @@ export class State {
   }
 
   getSpot = () => {
-    this.spot = {};
-    getSpotExchangeInfo()
-      .then((data) => {
-        if (data?.length) {
-          data?.forEach((symbol) => {
-            if (symbol.symbol && symbol.quoteAsset === 'USDT' && symbol.status === 'TRADING') {
-              this.spot[symbol.symbol] = symbol;
+    if (this.apiTimeout) {
+      setTimeout(this.getSpot, 1000 * 60 * apiTimeout + 100);
+    } else {
+      this.spot = {};
+      getSpotExchangeInfo()
+        .then((data) => {
+          if (data?.length) {
+            data?.forEach((symbol) => {
+              if (symbol.symbol && symbol.quoteAsset === 'USDT' && symbol.status === 'TRADING') {
+                this.spot[symbol.symbol] = symbol;
+              }
+            });
+            if (!this.futures) {
+              this.getFutures();
             }
-          });
-          if (!this.futures) {
-            this.getFutures();
           }
-        }
-      });
+        })
+        .catch((e) => {
+          console.log(e.response);
+          this.apiTimeout = true;
+          this.getSpot();
+          setTimeout(() => {
+            this.apiTimeout = false;
+          }, 1000 * 60 * apiTimeout);
+        });
+    }
   }
 
   getFutures = () => {
-    getFuturesExchangeInfo()
-      .then((data) => {
-        if (data?.length) {
-          this.futures = {};
-          this.tickers = {};
-          this.tickerNames = [];
-          data.forEach((symbol) => {
-            if (symbol.symbol && this.spot[symbol.symbol] && symbol.contractType === 'PERPETUAL') {
-              this.futures[symbol.symbol] = symbol;
-              this.tickerNames.push(symbol.symbol);
-              if (!this.config.tickers[symbol.symbol]) {
-                this.config.tickers[symbol.symbol] = {
-                  name: symbol.symbol,
-                  isActive: false,
-                  isNew: true
+    if (this.apiTimeout) {
+      setTimeout(this.getFutures, 1000 * 60 * apiTimeout + 100);
+    } else {
+      getFuturesExchangeInfo()
+        .then((data) => {
+          if (data?.length) {
+            this.futures = {};
+            this.tickers = {};
+            this.tickerNames = [];
+            data.forEach((symbol) => {
+              if (symbol.symbol && this.spot[symbol.symbol] && symbol.contractType === 'PERPETUAL') {
+                this.futures[symbol.symbol] = symbol;
+                this.tickerNames.push(symbol.symbol);
+                if (!this.config.tickers[symbol.symbol]) {
+                  this.config.tickers[symbol.symbol] = {
+                    name: symbol.symbol,
+                    isActive: false,
+                    isNew: true
+                  }
                 }
               }
-            }
-          });
-          if (this.tickerNames?.length) {
-            if (this.config.tickers) {
-              Object.keys(this.config.tickers)
-                .filter((name) => !this.config.tickers[name].isNew)
-                .forEach((name) => {
-                  if (!this.futures[name]) {
-                    delete this.config.tickers[name];
-                    localStorage.removeItem(name);
-                  }
-                });
-              Object.keys(this.config.tickers)
-                .forEach((name) => {
-                  this.config.tickers[name].isNew = false;
-                });
-              this.config.save();
-            }
-            this.tickerNames = Object.keys(this.config.tickers)
-              .filter((name) => this.config.tickers[name].isActive).sort();
-            this.tickerNames.forEach((name) => {
-              this.tickers[name] = new Ticker(name, this);
             });
-            this.dispatch?.(this);
+            if (this.tickerNames?.length) {
+              if (this.config.tickers) {
+                Object.keys(this.config.tickers)
+                  .filter((name) => !this.config.tickers[name].isNew)
+                  .forEach((name) => {
+                    if (!this.futures[name]) {
+                      delete this.config.tickers[name];
+                      localStorage.removeItem(name);
+                    }
+                  });
+                Object.keys(this.config.tickers)
+                  .forEach((name) => {
+                    this.config.tickers[name].isNew = false;
+                  });
+                this.config.save();
+              }
+              this.tickerNames = Object.keys(this.config.tickers)
+                .filter((name) => this.config.tickers[name].isActive).sort();
+              this.tickerNames.forEach((name) => {
+                this.tickers[name] = new Ticker(name, this);
+              });
+              this.dispatch?.(this);
+            }
           }
-        }
-      });
+        })
+        .catch((e) => {
+          console.log(e.response);
+          this.apiTimeout = true;
+          this.getFutures();
+          setTimeout(() => {
+            this.apiTimeout = false;
+          }, 1000 * 60 * apiTimeout);
+        });
+    }
   }
 
   updateTickers = () => {

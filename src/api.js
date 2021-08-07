@@ -2,12 +2,12 @@ import axios from 'axios';
 
 export const axiosSpot = axios.create({
   baseURL: 'https://api.binance.com',
-  responseType: 'json'
+  responseType: 'json',
 });
 
 export const axiosFutures = axios.create({
   baseURL: 'https://fapi.binance.com',
-  responseType: 'json'
+  responseType: 'json',
 });
 
 export const getSpotExchangeInfo = () => axiosSpot.get('/api/v3/exchangeInfo')
@@ -18,4 +18,8 @@ export const getFuturesExchangeInfo = () => axiosFutures.get('/fapi/v1/exchangeI
 
 export const getSymbolChartData = (symbol, interval, limit) =>
   axiosSpot.get('/api/v3/klines', {params: {symbol, interval, limit}})
-.then((data) => data?.data);
+    .then((data) => data?.data);
+
+export const getSymbolOrderBook = (symbol, limit) =>
+  axiosSpot.get('/api/v3/depth', {params: {symbol, limit}})
+    .then((data) => data?.data);

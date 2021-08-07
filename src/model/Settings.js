@@ -147,11 +147,15 @@ export class Settings {
       if (!action) this.save();
       const streamValue = {...rest};
       if (this.ticker) {
+        if (action) {
+          localStorage.removeItem(this.ticker);
+        }
         streamValue.action = this.ticker;
       } else {
         streamValue.action = 'update';
       }
       this.config$?.next(streamValue);
+      this.state?.dispatch?.(this.state);
     }
   };
 

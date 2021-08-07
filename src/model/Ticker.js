@@ -1,16 +1,22 @@
 import {OrderBook} from './OrderBook';
 import {createChart} from 'lightweight-charts';
 import {getSymbolChartData} from '../api';
-import {chartLimit, d1, h1, m5} from '../config';
+import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 import {barPrices, HIGH, LOW} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
   [m5]: h1,
   [h1]: d1,
+};
+
+const streams = {
+  orderBook: '@depth@1000ms',
+  chart: '@kline_5m',
+  bestPrice: '@bookTicker'
 };
 
 export class Ticker {
@@ -29,10 +35,17 @@ export class Ticker {
   orderBook;
   precision = 2;
   price;
-  price$ = new BehaviorSubject(null);
+  price$ = new Subject();
   series;
   state;
   isTimeout = false;
+  stream;
+  stream$ = {
+    orderBook: new Subject(),
+    chart: new Subject(),
+    bestPrice: new Subject()
+  }
+  streamMap = {};
 
   constructor(name, state) {
     this.name = name;
@@ -41,11 +54,6 @@ export class Ticker {
     }
     this.config = new Settings(state, this.name);
   }
-
-  closeStream = () => {
-    this.chartStream?.removeEventListener('message', this.onChartStreamMessage);
-    this.chartStream?.close();
-  };
 
   createChart = (chartElement) => {
     if (!this.chartElement) {
@@ -61,7 +69,6 @@ export class Ticker {
       } else {
         this.getChartData(m5);
       }
-      this.orderBook = new OrderBook(this);
     }
   };
 
@@ -69,7 +76,7 @@ export class Ticker {
     if (this.state.config.tickers[this.name]) {
       this.state.config.tickers[this.name].isActive = false;
       this.config?.configSubscription?.unsubscribe();
-      this.closeStream();
+      this.closeChartStream();
       this.orderBook?.remove();
       this.price$.next(-1);
       this.state?.config?.save?.();
@@ -86,35 +93,99 @@ export class Ticker {
   };
 
   getChartData = (interval) => {
-    getSymbolChartData(this.name, interval, chartLimit[interval])
-      .then((data) => {
-        if (data.length) {
-          const map = {};
-          const array = [];
-          data.forEach((bar) => {
-            const candle = new Bar(bar);
-            candle.i = array.push(candle) - 1;
-            map[candle.time] = candle;
-            this.setPrecision(candle);
-          });
-          this.chartData[interval] = {map, array};
-          if (interval === m5) {
-            const lastIndex = this.chartData[m5].array.length - 1;
-            this.price = this.chartData[m5].array[lastIndex].close;
-            this.setChartData();
-            this.setAverageVolume();
+    if (this.state.apiTimeout) {
+      setTimeout(() => {
+        this.getChartData(interval);
+      }, 1000 * 60 * apiTimeout + 100);
+    } else {
+      getSymbolChartData(this.name, interval, chartLimit[interval])
+        .then((data) => {
+          if (data.length) {
+            const map = {};
+            const array = [];
+            data.forEach((bar) => {
+              const candle = new Bar(bar);
+              candle.i = array.push(candle) - 1;
+              map[candle.time] = candle;
+              this.setPrecision(candle);
+            });
+            this.chartData[interval] = {map, array};
+            if (interval === m5) {
+              const lastIndex = this.chartData[m5].array.length - 1;
+              this.price = this.chartData[m5].array[lastIndex].close;
+              this.setChartData();
+              this.setAverageVolume();
+              this.orderBook = new OrderBook(this);
+            }
           }
-        }
-        if (nextInterval[interval]) {
-          this.getChartData(nextInterval[interval]);
-        } else {
-          this.setExtremes(h1);
-          this.setExtremes(d1);
-        }
-      });
+          if (nextInterval[interval]) {
+            this.getChartData(nextInterval[interval]);
+          } else {
+            this.setExtremes(h1);
+            this.setExtremes(d1);
+          }
+        })
+        .catch((e) => {
+          console.log(e.response);
+          this.state.apiTimeout = true;
+          this.getChartData(interval);
+          setTimeout(() => {
+            this.state.apiTimeout = false;
+          }, 1000 * 60 * apiTimeout);
+        });
+    }
   };
 
-  onChartStreamMessage = (e) => {
+  openStream = () => {
+    if (!this.stream) {
+      try {
+        this.stream = new WebSocket(`wss://stream.binance.com:9443/ws/${this.name.toLowerCase()}@kline_5m`);
+        this.stream.addEventListener('message', this.onChartMessage);
+        this.stream.addEventListener('error', this.onChartError);
+        console.log('openChartStream', this.name);
+      } catch (e) {
+        console.log('openChartStream', e);
+      }
+    }
+    const testStream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${this.name.toLowerCase()}@kline_5m/${this.name.toLowerCase()}@depth@1000ms/${this.name.toLowerCase()}@bookTicker`);
+    testStream.onmessage = (e) => {
+      console.log(this.name, e);
+    };
+  };
+
+  onStreamMessage = () => {
+
+  }
+
+  onStreamError = () => {
+
+  }
+
+  openChartStream = () => {
+    if (!this.chartStream) {
+      try {
+        this.chartStream = new WebSocket(`wss://stream.binance.com:9443/ws/${this.name.toLowerCase()}@kline_5m`);
+        this.chartStream.addEventListener('message', this.onChartMessage);
+        this.chartStream.addEventListener('error', this.onChartError);
+        console.log('openChartStream', this.name);
+      } catch (e) {
+        console.log('openChartStream', e);
+      }
+    }
+    const testStream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${this.name.toLowerCase()}@kline_5m/${this.name.toLowerCase()}@depth@1000ms/${this.name.toLowerCase()}@bookTicker`);
+    testStream.onmessage = (e) => {
+      console.log(this.name, e);
+    };
+  };
+
+  closeChartStream = () => {
+    this.chartStream?.removeEventListener('message', this.onChartMessage);
+    this.chartStream?.removeEventListener('error', this.onChartError);
+    this.chartStream?.close();
+    delete this.chartStream;
+  };
+
+  onChartMessage = (e) => {
     if (e.data) {
       const update = JSON.parse(e.data);
       if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c && update?.k?.v) {
@@ -143,12 +214,11 @@ export class Ticker {
     }
   };
 
-  openChartStream = () => {
-    if (!this.chartStream) {
-      this.chartStream = new WebSocket(`wss://stream.binance.com:9443/ws/${this.name.toLowerCase()}@kline_5m`);
-      this.chartStream.onmessage = this.onChartStreamMessage;
-    }
-  };
+  onChartError = (e) => {
+    console.log(this.name, e);
+    this.closeChartStream();
+    setTimeout(this.openChartStream, 5000);
+  }
 
   setAverageVolume = () => {
     const data = this.chartData?.[m5]?.array;

@@ -3,7 +3,7 @@ import {Button, Form, Input, Tooltip} from 'antd';
 import {isEqual} from 'lodash';
 
 import s from './Settings.module.scss';
-import {useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {defaultConfig} from '../../model/Settings';
 
 export const Settings = (props) => {
@@ -15,29 +15,37 @@ export const Settings = (props) => {
 
   const tickerConfig = name ? state.tickers[name].config.map : null;
 
-  const setStateConfig = (name) => {
-    if (name) {
-      if (state?.tickers?.[name]?.config.map) {
-        setConfig({...state.tickers[name].config.map});
-      }
+  const setStateConfig = useCallback(() => {
+    if (tickerConfig) {
+      setConfig({...tickerConfig});
     } else if (state.config.map) {
       setConfig({...state.config.map});
-    }
-  };
-
-  useEffect(() => {
-    if (name) {
-      setResetDisabled(isEqual(state.config.map, state.tickers[name].config.map));
-    } else {
-      setResetDisabled(isEqual(state.config.map, defaultConfig));
     }
   }, [state.config.map, tickerConfig]);
 
   useEffect(() => {
-    if (!config) {
-      setStateConfig(name);
+    if (name) {
+      setResetDisabled(isEqual(state.config.map, tickerConfig));
+    } else {
+      setResetDisabled(isEqual(state.config.map, defaultConfig));
     }
-  }, [name, state]);
+  }, [name, state.config.map, tickerConfig]);
+
+  useEffect(() => {
+    if (state.config.map) {
+      const newConfig = {...state.config.map};
+      formRef.current?.setFieldsValue(newConfig);
+      setConfig(newConfig);
+    }
+  }, [state.config.map]);
+
+  useEffect(() => {
+    if (tickerConfig) {
+      const newConfig = {...tickerConfig};
+      formRef.current?.setFieldsValue(newConfig);
+      setConfig(newConfig);
+    }
+  }, [tickerConfig]);
 
   const onFinish = (values) => {
     const newConfig = {};
@@ -64,9 +72,7 @@ export const Settings = (props) => {
     }
     if (newConfig) {
       setConfig(newConfig);
-      if (formRef.current) {
-        formRef.current.setFieldsValue(newConfig);
-      }
+      formRef.current?.setFieldsValue(newConfig);
     }
     state?.dispatch?.(state);
   };
