@@ -1,8 +1,9 @@
 import s from './Chart.module.scss';
 import {useEffect, useRef, useState} from 'react';
-import {Modal} from 'antd';
+import {Modal, Spin} from 'antd';
 import {Settings} from '../Settings/Settings';
 import {CloseOutlined, SettingOutlined} from '@ant-design/icons';
+import {Loader} from '../Loader/Loader';
 
 export const Chart = (props) => {
   const ref = useRef();
@@ -10,10 +11,19 @@ export const Chart = (props) => {
   const {name: symbol} = ticker;
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [acceptVisible, setAcceptVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     ticker.createChart(ref.current);
-  }, []);
+  }, [ticker]);
+
+  useEffect(() => {
+    ticker.updateUI$.subscribe((update) => {
+        if (update?.series) {
+          setLoading(false);
+        }
+      });
+  }, [ticker]);
 
   return (
     <>
@@ -32,6 +42,7 @@ export const Chart = (props) => {
           </div>
         </div>
         <div ref={ref} />
+        <Loader loading={loading} />
       </div>
       <Modal
         title={symbol}

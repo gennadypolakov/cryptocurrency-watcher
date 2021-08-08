@@ -21,6 +21,9 @@ export class State {
   tickerNames;
   tickers;
   counter = 0;
+  // orderSubscribers = 0;
+  // priceSubscribers = 0;
+  // chartSubscribers = 0;
 
   dispatch;
 
@@ -37,6 +40,11 @@ export class State {
     }
     this.setNotification();
     this.events$.subscribe(this.onEvent);
+    // setInterval(() => {
+    //   console.log('priceSubscribers', this.priceSubscribers);
+    //   console.log('orderSubscribers', this.orderSubscribers);
+    //   console.log('chartSubscribers', this.chartSubscribers);
+    // }, 2000);
   }
 
   onEvent = (event) => {
@@ -154,6 +162,7 @@ export class State {
             this.tickers[name] = new Ticker(name, this);
           }
         } else if (this.tickers[name]) {
+          this.tickers[name].disable(false);
           delete this.tickers[name];
         }
         return isActive;

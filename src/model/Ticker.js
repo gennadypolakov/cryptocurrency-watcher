@@ -13,10 +13,10 @@ const nextInterval = {
   [h1]: d1,
 };
 
-const streams = {
-  orderBook: '@depth@1000ms',
-  chart: '@kline_5m',
-  bestPrice: '@bookTicker'
+const methods = {
+  onOrderBook: '@depth@1000ms',
+  onChart: '@kline_5m',
+  onBestPrice: '@bookTicker'
 };
 
 export class Ticker {
@@ -45,7 +45,10 @@ export class Ticker {
     chart: new Subject(),
     bestPrice: new Subject()
   }
-  streamMap = {};
+  methodMap = {};
+  chartSubscription;
+  updateUI$ = new Subject();
+  isActive = true;
 
   constructor(name, state) {
     this.name = name;
@@ -53,6 +56,8 @@ export class Ticker {
       this.state = state;
     }
     this.config = new Settings(state, this.name);
+    this.chartSubscription = this.stream$.chart.subscribe(this.onChartMessage);
+    // this.state.chartSubscribers++;
   }
 
   createChart = (chartElement) => {
@@ -72,15 +77,22 @@ export class Ticker {
     }
   };
 
-  disable = () => {
+  disable = (updateConfig = true) => {
     if (this.state.config.tickers[this.name]) {
       this.state.config.tickers[this.name].isActive = false;
+      this.isActive = false;
       this.config?.configSubscription?.unsubscribe();
-      this.closeChartStream();
+      this.chartSubscription?.unsubscribe();
+      // this.state.chartSubscribers--;
+      // this.closeChartStream();
+      this.closeStream();
       this.orderBook?.remove();
       this.price$.next(-1);
-      this.state?.config?.save?.();
-      this.state?.updateTickers?.();
+      this.updateUI$.complete();
+      if (updateConfig) {
+        this.state?.config?.save?.();
+        this.state?.updateTickers?.();
+      }
     }
   };
 
@@ -116,6 +128,7 @@ export class Ticker {
               this.setChartData();
               this.setAverageVolume();
               this.orderBook = new OrderBook(this);
+              this.updateUI$.next(this);
             }
           }
           if (nextInterval[interval]) {
@@ -139,26 +152,45 @@ export class Ticker {
   openStream = () => {
     if (!this.stream) {
       try {
-        this.stream = new WebSocket(`wss://stream.binance.com:9443/ws/${this.name.toLowerCase()}@kline_5m`);
-        this.stream.addEventListener('message', this.onChartMessage);
-        this.stream.addEventListener('error', this.onChartError);
-        console.log('openChartStream', this.name);
+        const streamNames = [];
+        Object.keys(methods).forEach((name) => {
+          const streamName = this.name.toLowerCase() + methods[name];
+          streamNames.push(this.name.toLowerCase() + methods[name]);
+          this.methodMap[streamName] = name;
+        });
+        this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
+        this.stream.addEventListener('message', this.onStreamMessage);
+        this.stream.addEventListener('error', this.onStreamError);
+        console.log('openStream', this.name);
       } catch (e) {
-        console.log('openChartStream', e);
+        console.log('openStream', this.name, e);
       }
     }
-    const testStream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${this.name.toLowerCase()}@kline_5m/${this.name.toLowerCase()}@depth@1000ms/${this.name.toLowerCase()}@bookTicker`);
-    testStream.onmessage = (e) => {
-      console.log(this.name, e);
-    };
   };
 
-  onStreamMessage = () => {
+  closeStream = () => {
+    this.stream?.removeEventListener('message', this.onStreamMessage);
+    this.stream?.removeEventListener('error', this.onStreamError);
+    this.stream?.close();
+    delete this.stream;
+  };
 
+  onStreamMessage = (e) => {
+    if (e.data) {
+      const data = JSON.parse(e.data);
+      if (data.data && data.stream && this.methodMap[data.stream]) {
+        const methodName = this.methodMap[data.stream];
+        if (methodName) {
+          this[methodName]?.(data.data);
+        }
+      }
+    }
   }
 
-  onStreamError = () => {
-
+  onStreamError = (e) => {
+    console.log(this.name, e);
+    this.closeChartStream();
+    setTimeout(this.openStream, 5000);
   }
 
   openChartStream = () => {
@@ -172,10 +204,6 @@ export class Ticker {
         console.log('openChartStream', e);
       }
     }
-    const testStream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${this.name.toLowerCase()}@kline_5m/${this.name.toLowerCase()}@depth@1000ms/${this.name.toLowerCase()}@bookTicker`);
-    testStream.onmessage = (e) => {
-      console.log(this.name, e);
-    };
   };
 
   closeChartStream = () => {
@@ -185,9 +213,8 @@ export class Ticker {
     delete this.chartStream;
   };
 
-  onChartMessage = (e) => {
-    if (e.data) {
-      const update = JSON.parse(e.data);
+  onChartMessage = (update) => {
+    if (update) {
       if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c && update?.k?.v) {
         const bar = new Bar(update.k);
         this.price = bar.close;
@@ -212,6 +239,42 @@ export class Ticker {
         }
       }
     }
+  };
+
+  onChart = (update) => {
+    if (update) {
+      if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c && update?.k?.v) {
+        const bar = new Bar(update.k);
+        this.price = bar.close;
+        const {array, map} = this.chartData?.[m5] || {};
+        if (!map[bar.time]) {
+          bar.i = array.push(bar) - 1;
+          this.setAverageVolume();
+        }
+        map[bar.time] = bar;
+        if (this.series) {
+          const {time, open, high, low, close} = bar;
+          this.series.update({
+            time: time / 1000,
+            open,
+            high,
+            low,
+            close,
+          });
+          if (!this.isTimeout) {
+            this.price$?.next({high, low, time});
+          }
+        }
+      }
+    }
+  };
+
+  onOrderBook = (update) => {
+    this.orderBook.onOrderBookMessage(update);
+  };
+
+  onBestPrice = (update) => {
+    this.orderBook.onBestPrice(update);
   };
 
   onChartError = (e) => {
@@ -257,7 +320,8 @@ export class Ticker {
           minMove: this.minMove,
         },
       });
-      this.openChartStream();
+      this.openStream();
+      // this.openChartStream();
     }
   };
 
