@@ -9,7 +9,7 @@ import {
   removeOrderPercentage,
   removeTimeout
 } from '../config';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, Subject} from 'rxjs';
 
 export const defaultConfig = {
   checkedTimout,
@@ -26,7 +26,7 @@ export const defaultConfig = {
 export class Settings {
 
   map = {...defaultConfig};
-  configSubscription;
+  commonConfigSubscription;
   isDefault = true;
   state;
   ticker; // string
@@ -102,12 +102,17 @@ export class Settings {
     this.state = state;
     if (ticker) {
       this.ticker = ticker;
-      this.configSubscription = this.state?.config?.config$?.subscribe(this.updateStream);
+      this.commonConfigSubscription = this.state?.config?.config$?.subscribe(this.updateStream);
     } else {
       this.tickers = JSON.parse(localStorage.getItem('tickers')) || {};
     }
-    this.config$ = new BehaviorSubject(null);
+    this.config$ = new Subject();
     this.setConfig(ticker);
+  }
+
+  disable = () => {
+    this.commonConfigSubscription?.unsubscribe();
+    this.config$.complete();
   }
 
   reset = () => {

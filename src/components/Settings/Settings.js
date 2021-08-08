@@ -14,6 +14,9 @@ export const Settings = (props) => {
   const formRef = useRef();
 
   const tickerConfig = name ? state.tickers[name].config.map : null;
+  const averageVolume = name ? Math.round(state.tickers[name].averageVolume) : null;
+  const averageVolumeTime = tickerConfig?.last5mCount * 5;
+  const minOrderVolume = tickerConfig ? Math.round(averageVolume * tickerConfig?.minOrderPercentage) : null;
 
   const setStateConfig = useCallback(() => {
     if (tickerConfig) {
@@ -79,6 +82,10 @@ export const Settings = (props) => {
 
   return config ? (
     <div className={s.settings}>
+      {averageVolume ? <div>
+        <div>Средний объем {averageVolume} за {averageVolumeTime} мин</div>
+        <div>Минимальный размер ордера {minOrderVolume}</div>
+      </div> : null}
       <Form
         ref={formRef}
         initialValues={config}

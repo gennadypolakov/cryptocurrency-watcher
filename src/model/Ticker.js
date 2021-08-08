@@ -56,8 +56,6 @@ export class Ticker {
       this.state = state;
     }
     this.config = new Settings(state, this.name);
-    this.chartSubscription = this.stream$.chart.subscribe(this.onChartMessage);
-    // this.state.chartSubscribers++;
   }
 
   createChart = (chartElement) => {
@@ -81,13 +79,10 @@ export class Ticker {
     if (this.state.config.tickers[this.name]) {
       this.state.config.tickers[this.name].isActive = false;
       this.isActive = false;
-      this.config?.configSubscription?.unsubscribe();
-      this.chartSubscription?.unsubscribe();
-      // this.state.chartSubscribers--;
-      // this.closeChartStream();
+      this.config?.disable();
       this.closeStream();
       this.orderBook?.remove();
-      this.price$.next(-1);
+      this.price$.complete();
       this.updateUI$.complete();
       if (updateConfig) {
         this.state?.config?.save?.();
@@ -139,7 +134,6 @@ export class Ticker {
           }
         })
         .catch((e) => {
-          console.log(e.response);
           this.state.apiTimeout = true;
           this.getChartData(interval);
           setTimeout(() => {
@@ -161,9 +155,8 @@ export class Ticker {
         this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
         this.stream.addEventListener('message', this.onStreamMessage);
         this.stream.addEventListener('error', this.onStreamError);
-        console.log('openStream', this.name);
       } catch (e) {
-        console.log('openStream', this.name, e);
+        this.onStreamError(e);
       }
     }
   };
@@ -189,57 +182,9 @@ export class Ticker {
 
   onStreamError = (e) => {
     console.log(this.name, e);
-    this.closeChartStream();
+    this.closeStream();
     setTimeout(this.openStream, 5000);
   }
-
-  openChartStream = () => {
-    if (!this.chartStream) {
-      try {
-        this.chartStream = new WebSocket(`wss://stream.binance.com:9443/ws/${this.name.toLowerCase()}@kline_5m`);
-        this.chartStream.addEventListener('message', this.onChartMessage);
-        this.chartStream.addEventListener('error', this.onChartError);
-        console.log('openChartStream', this.name);
-      } catch (e) {
-        console.log('openChartStream', e);
-      }
-    }
-  };
-
-  closeChartStream = () => {
-    this.chartStream?.removeEventListener('message', this.onChartMessage);
-    this.chartStream?.removeEventListener('error', this.onChartError);
-    this.chartStream?.close();
-    delete this.chartStream;
-  };
-
-  onChartMessage = (update) => {
-    if (update) {
-      if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c && update?.k?.v) {
-        const bar = new Bar(update.k);
-        this.price = bar.close;
-        const {array, map} = this.chartData?.[m5] || {};
-        if (!map[bar.time]) {
-          bar.i = array.push(bar) - 1;
-          this.setAverageVolume();
-        }
-        map[bar.time] = bar;
-        if (this.series) {
-          const {time, open, high, low, close} = bar;
-          this.series.update({
-            time: time / 1000,
-            open,
-            high,
-            low,
-            close,
-          });
-          if (!this.isTimeout) {
-            this.price$?.next({high, low, time});
-          }
-        }
-      }
-    }
-  };
 
   onChart = (update) => {
     if (update) {
@@ -261,9 +206,7 @@ export class Ticker {
             low,
             close,
           });
-          if (!this.isTimeout) {
-            this.price$?.next({high, low, time});
-          }
+          this.price$?.next({high, low, time});
         }
       }
     }
@@ -276,12 +219,6 @@ export class Ticker {
   onBestPrice = (update) => {
     this.orderBook.onBestPrice(update);
   };
-
-  onChartError = (e) => {
-    console.log(this.name, e);
-    this.closeChartStream();
-    setTimeout(this.openChartStream, 5000);
-  }
 
   setAverageVolume = () => {
     const data = this.chartData?.[m5]?.array;

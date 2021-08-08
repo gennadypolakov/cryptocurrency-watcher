@@ -84,7 +84,6 @@ export class State {
           }
         })
         .catch((e) => {
-          console.log(e.response);
           this.apiTimeout = true;
           this.getSpot();
           setTimeout(() => {
@@ -143,7 +142,6 @@ export class State {
           }
         })
         .catch((e) => {
-          console.log(e.response);
           this.apiTimeout = true;
           this.getFutures();
           setTimeout(() => {

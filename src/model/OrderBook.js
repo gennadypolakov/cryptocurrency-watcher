@@ -16,6 +16,7 @@ export class OrderBook {
   lastUpdateId;
   lastUpdated;
   bestPriceLastUpdateTime = Date.now();
+  lines = {ask: {}, bid: {}};
   name;
   orderStream = [];
   orders;
@@ -29,6 +30,7 @@ export class OrderBook {
   u;
   orderBookSubscription;
   bestPriceSubscription;
+  checkId;
 
   constructor(ticker) {
     this.ticker = ticker;
@@ -38,6 +40,7 @@ export class OrderBook {
     // if (this.name) this.createStreams();
     // this.orderBookSubscription = this.ticker?.stream$?.orderBook?.subscribe(this.onOrderBookMessage);
     // this.bestPriceSubscription = this.ticker?.stream$?.bestPrice?.subscribe(this.onBestPrice);
+    this.ticker?.config?.config$?.subscribe(this.checkOrders);
   }
 
   // closeStreams = () => {
@@ -100,8 +103,36 @@ export class OrderBook {
   //   setTimeout(this.createBestPriceStream, 5000);
   // };
 
+  checkOrders = () => {
+    this.checkId = Symbol();
+    // this.best.ask?.checkVolumeOnPriceRange();
+    // this.best.bid?.checkVolumeOnPriceRange();
+    const priceDistance = this.ticker?.config?.priceDistance || 0;
+    let bestPrice = this.bestPrice.ask;
+    let endPrice = bestPrice + bestPrice * priceDistance;
+    if (this.ask) {
+      const prices = Object.keys(this.ask).map((p) => Number(p)).filter((p) => p < endPrice);
+      prices.forEach((p) => {
+        this.ask[p].checkLine(this.checkId);
+      });
+    }
+    bestPrice = this.bestPrice.bid;
+    endPrice = bestPrice - bestPrice * priceDistance;
+    if (this.bid) {
+      const prices = Object.keys(this.bid).map((p) => Number(p)).filter((p) => p > endPrice);
+      prices.forEach((p) => {
+        this.bid[p].checkLine(this.checkId);
+      });
+    }
+    Object.keys(this.lines.ask).forEach((price) => {
+      this.lines.ask[price].checkLine();
+    });
+    Object.keys(this.lines.bid).forEach((price) => {
+      this.lines.bid[price].checkLine();
+    });
+  }
+
   onOrderBookMessage = (update) => {
-    console.log('onOrderBookMessage', update);
     if (update) {
       if (this.synced) {
         this.updateOrderBook(update);
@@ -123,25 +154,33 @@ export class OrderBook {
         this.bestPrice.bid = Number(data.b);
       }
       const currentTime = Date.now();
-      if (currentTime > this.bestPriceLastUpdateTime + 1000) {
+      if (currentTime > this.bestPriceLastUpdateTime + 1000 * 2) {
         this.bestPriceLastUpdateTime = currentTime;
         if (this.ask && this.bestPrice.ask) {
-          const bestAsk = this.ask[this.bestPrice.ask];
-          if (bestAsk) {
-            bestAsk.removePrev();
-            this.best.ask = bestAsk;
-          } else if (this.best.ask) {
-            this.best.ask.checkBestPrice();
-          }
+          const prices = Object.keys(this.ask).map((p) => Number(p)).filter((p) => p < this.bestPrice.ask);
+          prices.forEach((p) => {
+            this.ask[p].remove({updateLinks: false});
+          });
+          // const bestAsk = this.ask[this.bestPrice.ask];
+          // if (bestAsk) {
+          //   bestAsk.removePrev();
+          //   this.best.ask = bestAsk;
+          // } else if (this.best.ask) {
+          //   this.best.ask.checkBestPrice();
+          // }
         }
         if (this.bid && this.bestPrice.bid) {
-          const bestBid = this.bid[this.bestPrice.bid];
-          if (bestBid) {
-            bestBid.removePrev();
-            this.best.bid = bestBid;
-          } else if (this.best.bid) {
-            this.best.bid.checkBestPrice();
-          }
+          const prices = Object.keys(this.bid).map((p) => Number(p)).filter((p) => p > this.bestPrice.bid);
+          prices.forEach((p) => {
+            this.bid[p].remove({updateLinks: false});
+          });
+          // const bestBid = this.bid[this.bestPrice.bid];
+          // if (bestBid) {
+          //   bestBid.removePrev();
+          //   this.best.bid = bestBid;
+          // } else if (this.best.bid) {
+          //   this.best.bid.checkBestPrice();
+          // }
         }
       }
     }
@@ -171,10 +210,6 @@ export class OrderBook {
       getSymbolOrderBook(this.name, 100)
         .then((data) => {
           if (data) {
-            // const averageVolume = this.ticker?.averageVolume || 0;
-            // const minOrderPercentage = this.ticker?.config?.minOrderPercentage || 1;
-            console.log('asks', data.asks);
-            console.log('bids', data.bids);
             let prev;
             this.ask = data.asks?.reduce((acc, o, i) => {
               const price = Number(o[0]);
@@ -224,11 +259,8 @@ export class OrderBook {
   };
 
   remove = () => {
-    // this.closeStreams();
-    this.orderBookSubscription?.unsubscribe();
-    this.bestPriceSubscription?.unsubscribe();
-    if (this.ask) Object.keys(this.ask).forEach((price) => this.ask[price].remove());
-    if (this.bid) Object.keys(this.bid).forEach((price) => this.bid[price].remove());
+    // this.best?.ask?.remove({next: true});
+    // this.best?.bid?.remove({next: true});
   }
 
   syncOrderBook = () => {
@@ -251,38 +283,24 @@ export class OrderBook {
   updateOrderBook = (update, first = false) => {
     if ((this.u && update?.U === this.u + 1) || first) {
       this.u = update?.u;
-      console.log('ask update', update?.a)
-      console.log('bid update', update?.b)
-      let lastUpdated;
       update?.a?.forEach((order) => {
         const price = Number(order[0]);
         const volume = Number(order[1]);
         if (price in this.ask) {
           this.ask[price].update(volume);
-          lastUpdated = this.ask[price];
-        } else {
-          lastUpdated = lastUpdated || this.best.ask;
+        } else if (volume) {
           this.ask[price] = new Order(ASK, price, volume, this);
-          lastUpdated.updateLinks(this.ask[price]);
         }
       });
-      lastUpdated = null;
       update?.b?.forEach((order) => {
         const price = Number(order[0]);
         const volume = Number(order[1]);
         if (price in this.bid) {
           this.bid[price].update(volume);
-          lastUpdated = this.bid[price];
-        } else {
-          lastUpdated = lastUpdated || this.best.bid;
+        } else if (volume) {
           this.bid[price] = new Order(BID, price, volume, this);
-          lastUpdated.updateLinks(this.bid[price]);
         }
       });
-      // this.setBestPrice(ASK);
-      // this.setBestPrice(BID);
-      // const {bestPrice} = this;
-      // this.orderBook$.next({ask, bid});
     }
   };
 

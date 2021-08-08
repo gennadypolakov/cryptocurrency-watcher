@@ -1,4 +1,4 @@
-import {CROSSED_LEVEL_COLOR, D1, H1, HIGH, LEVEL_COLOR, LOW, M5} from '../constants';
+import {CROSSED_LEVEL_COLOR, D1, H1, HIGH, LEVEL_COLOR, M5} from '../constants';
 import {d1, lineWidths, priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
 
@@ -34,7 +34,7 @@ export class Level {
     const absDelta = this.side === HIGH ? this.price - price : price - this.price;
     const timeDelta = Date.now() - (this.time || Date.now()) - minLevelAge * 1000 * 60 * 60;
     if (absDelta > 0) {
-      if (absDelta / price < priceDistance && timeDelta > 0) {
+      if (absDelta / price < priceDistance && timeDelta > 0 && !this.ticker.isTimeout) {
         this.ticker?.state?.events$?.next(this);
       }
     } else if (absDelta < 0) {
@@ -94,7 +94,6 @@ export class Level {
   };
 
   destroy = () => {
-    this.subscription?.unsubscribe();
     if (this.line) this.ticker?.series?.removePriceLine(this.line);
     if (this.price && this.ticker?.levels?.[this.price]) {
       delete this.ticker.levels[this.price];
@@ -103,8 +102,7 @@ export class Level {
 
   onPrice = (price) => {
     if (price) {
-      if (price === -1) this.destroy();
-      else this.check(price);
+      this.check(price);
     }
   };
 
