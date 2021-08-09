@@ -2,7 +2,7 @@ import s from './Chart.module.scss';
 import {useEffect, useRef, useState} from 'react';
 import {Modal} from 'antd';
 import {Settings} from '../Settings/Settings';
-import {CloseOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
+import {CloseOutlined, PoweroffOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
 import {Loader} from '../Loader/Loader';
 
 export const Chart = (props) => {
@@ -12,12 +12,13 @@ export const Chart = (props) => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [acceptVisible, setAcceptVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [chart, setChart] = useState(false);
 
   const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
 
   useEffect(() => {
-
     ticker.createChart(ref.current);
+    ticker.enableChart(false);
   }, [ticker]);
 
   useEffect(() => {
@@ -43,6 +44,11 @@ export const Chart = (props) => {
     ticker?.state?.dispatch(ticker.state);
   };
 
+  const enableChart = () => {
+    ticker?.enableChart(!chart);
+    setChart(!chart);
+  }
+
   return (
     <>
       <div className={s.chart} id={symbol}>
@@ -59,6 +65,11 @@ export const Chart = (props) => {
                 title="Добавить в избранное"
               />
             }
+            <PoweroffOutlined
+              onClick={enableChart}
+              title={`${chart ? 'Выключить' : 'Включить'} управление`}
+              style={{color: chart ? 'black' : 'gray'}}
+            />
             <SettingOutlined
               onClick={() => setSettingsVisible(v => !v)}
               title="Индивидуальные настройки"

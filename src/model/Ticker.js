@@ -99,6 +99,13 @@ export class Ticker {
     }, (this.config.notificationTimeout || 5) * 1000 * 60);
   };
 
+  enableChart = (enable = true) => {
+    this.chart?.applyOptions({
+      handleScroll: enable,
+      handleScale: enable
+    });
+  };
+
   getChartData = (interval) => {
     if (this.state.apiTimeout) {
       setTimeout(() => {
