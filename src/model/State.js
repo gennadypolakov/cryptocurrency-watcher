@@ -23,10 +23,7 @@ export class State {
   tickers;
   counter = 0;
   loading = {};
-  // orderSubscribers = 0;
-  // priceSubscribers = 0;
-  // chartSubscribers = 0;
-  db;
+  favorites = [];
 
   dispatch;
 

@@ -2,11 +2,14 @@ import {Checkbox} from 'antd';
 import {useEffect, useState} from 'react';
 
 import s from './Tickers.module.scss';
+import {StarFilled} from '@ant-design/icons';
 
 export const Tickers = (props) => {
   const {state} = props;
   const [tickerNames, setTickerNames] = useState();
   // const [allChecked, setAllChecked] = useState();
+
+  const favorites = state?.favorites?.reduce((acc, name) => {acc[name] = true; return acc}, {});
 
   let checkedCount = 0;
   if (state?.config?.tickers) {
@@ -45,7 +48,10 @@ export const Tickers = (props) => {
           <Checkbox
             onChange={onChange(name)}
             checked={state.config.tickers[name].isActive}
-          >{name}</Checkbox>
+          >
+            {name}
+            {favorites?.[name] ? <StarFilled style={{marginLeft: '3px'}} /> : null}
+          </Checkbox>
         </div>)}
       </>
       : <div>Данные загружаются...</div>}

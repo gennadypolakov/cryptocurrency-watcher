@@ -3,7 +3,7 @@ import {Button, Form, Input, Tooltip} from 'antd';
 import {isEqual} from 'lodash';
 
 import s from './Settings.module.scss';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {defaultConfig} from '../../model/Settings';
 
 export const Settings = (props) => {
@@ -17,14 +17,6 @@ export const Settings = (props) => {
   const averageVolume = name ? Math.round(state.tickers[name].averageVolume) : null;
   const averageVolumeTime = tickerConfig?.last5mCount * 5;
   const minOrderVolume = tickerConfig ? Math.round(averageVolume * tickerConfig?.minOrderPercentage) : null;
-
-  const setStateConfig = useCallback(() => {
-    if (tickerConfig) {
-      setConfig({...tickerConfig});
-    } else if (state.config.map) {
-      setConfig({...state.config.map});
-    }
-  }, [state.config.map, tickerConfig]);
 
   useEffect(() => {
     if (name) {

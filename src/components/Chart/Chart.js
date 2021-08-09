@@ -1,8 +1,8 @@
 import s from './Chart.module.scss';
 import {useEffect, useRef, useState} from 'react';
-import {Modal, Spin} from 'antd';
+import {Modal} from 'antd';
 import {Settings} from '../Settings/Settings';
-import {CloseOutlined, SettingOutlined} from '@ant-design/icons';
+import {CloseOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
 import {Loader} from '../Loader/Loader';
 
 export const Chart = (props) => {
@@ -12,6 +12,13 @@ export const Chart = (props) => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [acceptVisible, setAcceptVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
+
+  useEffect(() => {
+
+    ticker.createChart(ref.current);
+  }, [ticker]);
 
   useEffect(() => {
     ticker.createChart(ref.current);
@@ -25,12 +32,33 @@ export const Chart = (props) => {
       });
   }, [ticker]);
 
+  const addFavorite = () => {
+    if (favorite) {
+      ticker.state.favorites = ticker.state.favorites.filter((name) => name !== ticker?.name);
+    } else {
+      if (ticker?.state?.favorites) {
+        ticker.state.favorites = [...ticker.state.favorites, ticker.name].sort();
+      }
+    }
+    ticker?.state?.dispatch(ticker.state);
+  };
+
   return (
     <>
       <div className={s.chart} id={symbol}>
         <div className={s.header}>
           <span>{symbol}</span>
           <div className={s.controls}>
+            {favorite
+              ? <StarFilled
+                onClick={addFavorite}
+                title="Удалить из избранного"
+              />
+              : <StarOutlined
+                onClick={addFavorite}
+                title="Добавить в избранное"
+              />
+            }
             <SettingOutlined
               onClick={() => setSettingsVisible(v => !v)}
               title="Индивидуальные настройки"

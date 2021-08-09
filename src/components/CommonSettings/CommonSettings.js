@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {CloseOutlined, ExclamationCircleOutlined, LinkOutlined, SettingOutlined} from '@ant-design/icons';
+import {CloseOutlined, ExclamationCircleOutlined, SettingOutlined} from '@ant-design/icons';
 import {Badge, Card, Modal} from 'antd';
 import {Tabs} from 'antd';
 

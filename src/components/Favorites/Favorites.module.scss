@@ -1,0 +1,41 @@
+.favorites {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    padding: 10px;
+    background-color: rgba(255,255,255, 0.8);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 130px;
+    height: auto;
+    z-index: 100;
+
+    & > * {
+        margin-right: 8px;
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+
+.favorite {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+
+    & > * {
+        margin-right: 5px;
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+
+.remove {
+    &:hover {
+        color: red;
+    }
+}

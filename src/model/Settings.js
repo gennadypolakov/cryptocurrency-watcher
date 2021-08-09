@@ -9,7 +9,7 @@ import {
   removeOrderPercentage,
   removeTimeout
 } from '../config';
-import {BehaviorSubject, Subject} from 'rxjs';
+import {Subject} from 'rxjs';
 
 export const defaultConfig = {
   checkedTimout,

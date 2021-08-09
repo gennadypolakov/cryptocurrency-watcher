@@ -4,8 +4,8 @@ import {getSymbolChartData} from '../api';
 import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
-import {BehaviorSubject, Subject} from 'rxjs';
-import {barPrices, D1, HIGH, LOW} from '../constants';
+import {Subject} from 'rxjs';
+import {barPrices, HIGH, LOW} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
