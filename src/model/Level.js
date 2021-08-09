@@ -13,6 +13,9 @@ export class Level {
   subscription;
   time;
   ticker;
+  viewed;
+  blinkIntervalId;
+  lineStyle = LineStyle.Solid;
 
   constructor({interval, price, side, ticker, time} = {}) {
     this.interval = interval || M5;
@@ -32,10 +35,27 @@ export class Level {
     const price = update[this.side];
     const {minLevelAge = 0, priceDistance = 1} = this.ticker?.config || {};
     const absDelta = this.side === HIGH ? this.price - price : price - this.price;
-    const timeDelta = Date.now() - (this.time || Date.now()) - minLevelAge * 1000 * 60 * 60;
+    const currentTime = Date.now();
+    const timeDelta = currentTime - (this.time || currentTime) - minLevelAge * 1000 * 60 * 60;
     if (absDelta > 0) {
-      if (absDelta / price < priceDistance && timeDelta > 0 && !this.ticker.isTimeout) {
-        this.ticker?.state?.events$?.next(this);
+      if (absDelta / price < priceDistance && timeDelta > 0 && this.isActual) {
+        if (!this.ticker.isTimeout && !this.viewed) {
+          this.ticker?.state?.events$?.next(this);
+        }
+        if (!this.blinkIntervalId) {
+          this.blinkIntervalId = setInterval(() => {
+            this.line?.applyOptions({
+              lineStyle: this.lineStyle
+            });
+            this.lineStyle = this.lineStyle === LineStyle.Solid ? LineStyle.Dashed : LineStyle.Solid;
+          }, 1000);
+        }
+      } else if (this.blinkIntervalId) {
+        clearInterval(this.blinkIntervalId);
+        delete this.blinkIntervalId;
+        this.line?.applyOptions({
+          lineStyle: this.isActual ? LineStyle.Solid : LineStyle.Dashed
+        });
       }
     } else if (absDelta < 0) {
       if (!this.ticker?.levels?.[price]) {
@@ -45,6 +65,8 @@ export class Level {
       if (this.interval === M5) {
         this.destroy();
       } else {
+        if (this.blinkIntervalId) clearInterval(this.blinkIntervalId);
+        delete this.blinkIntervalId;
         this.line?.applyOptions({
           color: CROSSED_LEVEL_COLOR,
           lineWidth: lineWidths[this.interval] || 1,
@@ -60,6 +82,7 @@ export class Level {
     const existing = this.ticker?.levels?.[this.price];
     let removeExisting = false;
     if (this.interval === D1 && this.time > Date.now() - 1000 * 60 * 60 * 24) {
+      this.time = Date.now() - 1000 * 60 * 60;
       this.interval = H1
     }
     const {interval, time} = this;

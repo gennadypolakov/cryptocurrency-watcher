@@ -167,7 +167,11 @@ export class Settings {
   updateStream = (config) => {
     if (config) {
       const action = config.action;
-      if (action) this[action]?.(config);
+      if (action) {
+        setTimeout(() => {
+          this[action]?.(config);
+        }, 0);
+      }
     }
   };
 

@@ -1,6 +1,7 @@
 import {getFuturesExchangeInfo, getSpotExchangeInfo} from '../api';
-import {BehaviorSubject, Subject} from 'rxjs';
+import {Subject} from 'rxjs';
 import {set} from 'lodash';
+// import Dexie from 'dexie';
 
 import {Ticker} from './Ticker';
 import {Settings} from './Settings';
@@ -21,9 +22,11 @@ export class State {
   tickerNames;
   tickers;
   counter = 0;
+  loading = {};
   // orderSubscribers = 0;
   // priceSubscribers = 0;
   // chartSubscribers = 0;
+  db;
 
   dispatch;
 
@@ -45,6 +48,17 @@ export class State {
     //   console.log('orderSubscribers', this.orderSubscribers);
     //   console.log('chartSubscribers', this.chartSubscribers);
     // }, 2000);
+
+    // this.db = new Dexie('CryptoMonitor');
+    // this.db.version(1).stores({
+    //   orders: '++id,name,side,price,volume,line'
+    // });
+    // this.db.orders.clear();
+    // setTimeout(() => {
+    //   setInterval(() => {
+    //     this.db.orders.count().then((c) => console.log('count', c));
+    //   }, 2000)
+    // }, 60000);
   }
 
   onEvent = (event) => {
@@ -134,10 +148,18 @@ export class State {
               }
               this.tickerNames = Object.keys(this.config.tickers)
                 .filter((name) => this.config.tickers[name].isActive).sort();
+              this.loading = {};
               this.tickerNames.forEach((name) => {
-                this.tickers[name] = new Ticker(name, this);
+                this.loading[name] = true;
+                setTimeout(() => {
+                  this.tickers[name] = new Ticker(name, this);
+                  delete this.loading[name];
+                  if (!Object.keys(this.loading).length) {
+                    this.dispatch?.(this);
+                  }
+                });
               });
-              this.dispatch?.(this);
+              // this.dispatch?.(this);
             }
           }
         })
@@ -155,17 +177,24 @@ export class State {
     this.tickerNames = Object.keys(this.config.tickers)
       .filter((name) => {
         const isActive = this.config.tickers[name].isActive
-        if (isActive) {
-          if (!this.tickers[name]) {
-            this.tickers[name] = new Ticker(name, this);
+        this.loading[name] = true;
+        setTimeout(() => {
+          if (isActive) {
+            if (!this.tickers[name]) {
+              this.tickers[name] = new Ticker(name, this);
+            }
+          } else if (this.tickers[name]) {
+            this.tickers[name].disable(false);
+            delete this.events[name];
+            delete this.tickers[name];
           }
-        } else if (this.tickers[name]) {
-          this.tickers[name].disable(false);
-          delete this.tickers[name];
-        }
+          delete this.loading[name];
+          if (!Object.keys(this.loading).length) {
+            this.dispatch?.(this);
+          }
+        }, 0);
         return isActive;
       }).sort();
-    this.dispatch?.(this);
   };
 
   remove = (ticker) => {

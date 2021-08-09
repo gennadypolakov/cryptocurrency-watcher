@@ -26,6 +26,16 @@ export const CommonSettings = (props) => {
     window.location.href = `/#${ticker}`;
     setEventsVisible(false);
     if (state.events?.[ticker]) {
+      if (state.events[ticker].level) {
+        Object.keys(state.events[ticker].level).forEach((p) => {
+          state.events[ticker].level[p].viewed = true;
+        });
+      }
+      if (state.events[ticker].order) {
+        Object.keys(state.events[ticker].order).forEach((p) => {
+          state.events[ticker].order[p].viewed = true;
+        });
+      }
       delete state.events[ticker];
       state.dispatch?.(state);
     }
@@ -96,21 +106,28 @@ export const CommonSettings = (props) => {
       footer={null}
       width={800}
     >
-      {tickers.map((ticker) => (
-        <Card
-          className={s.card}
-          extra={<div className={s.controls}>
-            <LinkOutlined onClick={toChart(ticker)} title="Перейти на график" />
-            <CloseOutlined onClick={disableNotifications(ticker)} title="Отключить уведомления" />
-          </div>}
-          key={ticker}
-          size="small"
-          title={ticker}
-        >
-          {getLevels(ticker)}
-          {getOrders(ticker)}
-        </Card>
-      ))}
+      {tickers.map((ticker) => {
+        const levels = getLevels(ticker);
+        const orders = getOrders(ticker);
+        if (!levels && !orders) {
+          delete state.events[ticker];
+        }
+        return levels || orders ? (
+          <Card
+            className={s.card}
+            extra={<div className={s.controls}>
+              <CloseOutlined onClick={disableNotifications(ticker)} title="Отключить уведомления" />
+            </div>}
+            key={ticker}
+            onClick={toChart(ticker)}
+            size="small"
+            title={ticker}
+          >
+            {levels}
+            {orders}
+          </Card>
+        ) : null;
+      })}
     </Modal>
   </>;
 };

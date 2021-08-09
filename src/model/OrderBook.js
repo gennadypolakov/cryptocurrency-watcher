@@ -83,17 +83,36 @@ export class OrderBook {
       const currentTime = Date.now();
       if (currentTime > this.bestPriceLastUpdateTime + 1000 * 2) {
         this.bestPriceLastUpdateTime = currentTime;
+        // console.log(this.name);
+        // let start = Date.now();
         if (this.ask && this.bestPrice.ask) {
           const prices = Object.keys(this.ask).map((p) => Number(p)).filter((p) => p < this.bestPrice.ask);
+          // start = Date.now();
+          // if (this.state?.db?.orders) {
+          //   this.state.db.orders
+          //     .where('name')
+          //     .equals(this.name)
+          //     .and((o) => o.side === ASK)
+          //     .and((o) => o.price < this.bestPrice.ask)
+          //     .count((orders) => {
+          //       console.log('done db:', Date.now() - start);
+          //       console.log('orders', orders);
+          //     });
+          // }
           prices.forEach((p) => {
             this.ask[p].remove();
           });
+          // console.log('count:', prices.length);
+          // console.log('done:', Date.now() - start);
         }
+        // start = Date.now();
         if (this.bid && this.bestPrice.bid) {
           const prices = Object.keys(this.bid).map((p) => Number(p)).filter((p) => p > this.bestPrice.bid);
           prices.forEach((p) => {
             this.bid[p].remove();
           });
+          // console.log('count:', prices.length);
+          // console.log('done:', Date.now() - start);
         }
       }
     }
@@ -110,10 +129,12 @@ export class OrderBook {
     if (this.state.apiTimeout) {
       setTimeout(this.setOrderBook, 1000 * 60 * apiTimeout + 100);
     } else {
-      getSymbolOrderBook(this.name, 100)
+      this.ask = {};
+      this.bid = {};
+      getSymbolOrderBook(this.name, 1000)
         .then((data) => {
+          // const db = this.state.db?.orders;
           if (data) {
-            this.ask = {};
             data.asks?.forEach((o) => {
               const price = Number(o[0]);
               const volume = Number(o[1]);
@@ -122,8 +143,16 @@ export class OrderBook {
               } else if (volume) {
                 this.ask[price] = new Order(ASK, price, volume, this);
               }
+              // if (db) db.put({
+              //   name: this.name,
+              //   side: ASK,
+              //   price,
+              //   volume,
+              //   line: false
+              // }).then((id) => {
+              //   if (this.ask[price]) this.ask[price].id = id;
+              // }).catch((e) => console.log(e));
             });
-            this.bid = {};
             data.bids?.forEach((o) => {
               const price = Number(o[0]);
               const volume = Number(o[1]);
@@ -132,6 +161,15 @@ export class OrderBook {
               } else if (volume) {
                 this.bid[price] = new Order(BID, price, volume, this);
               }
+              // if (db) db.put({
+              //   name: this.name,
+              //   side: ASK,
+              //   price,
+              //   volume,
+              //   line: false
+              // }).then((id) => {
+              //   if (this.bid[price]) this.bid[price].id = id;
+              // }).catch((e) => console.log(e));
             });
             this.lastUpdateId = data.lastUpdateId;
             this.syncOrderBook();

@@ -5,7 +5,7 @@ import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {BehaviorSubject, Subject} from 'rxjs';
-import {barPrices, HIGH, LOW} from '../constants';
+import {barPrices, D1, HIGH, LOW} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
@@ -122,7 +122,9 @@ export class Ticker {
               this.price = this.chartData[m5].array[lastIndex].close;
               this.setChartData();
               this.setAverageVolume();
-              this.orderBook = new OrderBook(this);
+              if (!this.orderBook) {
+                this.orderBook = new OrderBook(this);
+              }
               this.updateUI$.next(this);
             }
           }

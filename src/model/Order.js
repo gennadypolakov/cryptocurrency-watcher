@@ -4,6 +4,7 @@ import {ASK, ORDER_COLOR} from '../constants';
 
 export class Order {
 
+  id;
   bestPrice;
   line;
   orderBook;
@@ -15,6 +16,7 @@ export class Order {
   volume;
   side; // ask | bid
   checkId;
+  viewed;
 
   constructor(side, price, volume, orderBook) {
     this.orderBook = orderBook;
@@ -56,7 +58,7 @@ export class Order {
           if (second) {
             this.removeLine();
             this.createLine();
-            if (!isTimeout) this.ticker?.state?.events$?.next(this);
+            if (!isTimeout && !this.viewed) this.ticker?.state?.events$?.next(this);
           } else {
             this.removeLine();
             this.createLine();
@@ -99,6 +101,7 @@ export class Order {
 
   createLine = () => {
     if (
+      !this.orderBook.lines[this.side][this.price] &&
       this.side &&
       this.price &&
       this.volume
