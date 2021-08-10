@@ -1,12 +1,13 @@
 import {OrderBook} from './OrderBook';
 import {createChart} from 'lightweight-charts';
 import {getSymbolChartData} from '../api';
-import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
+import {apiTimeout, chartLimit, d1, h1, m5, minLevelAge} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
-import {barPrices, HIGH, LOW} from '../constants';
+import {barPrices, HIGH, LOW, M5} from '../constants';
 import {Level} from './Level';
+// import {init, dispose} from 'klinecharts';
 
 const nextInterval = {
   [m5]: h1,
@@ -40,13 +41,7 @@ export class Ticker {
   state;
   isTimeout = false;
   stream;
-  stream$ = {
-    orderBook: new Subject(),
-    chart: new Subject(),
-    bestPrice: new Subject()
-  }
-  methodMap = {};
-  chartSubscription;
+  method = {};
   updateUI$ = new Subject();
   isActive = true;
 
@@ -57,6 +52,24 @@ export class Ticker {
     }
     this.config = new Settings(state, this.name);
   }
+
+  // createChartTest = (chartElement) => {
+  //   if (!this.chartElement) {
+  //     this.chartElement = chartElement;
+  //   }
+  //   if (!this.chart && this.chartElement) {
+  //     this.chart = init(this.chartElement);
+  //     this.chart.setStyleOptions({candle: {tooltip: {labels: ['T', 'O', 'C', 'H', 'L', 'V']}}});
+  //     this.chart.createTechnicalIndicator('VOL', false);
+  //   }
+  //   if (this.chart) {
+  //     if (this.chartData[m5]) {
+  //       this.setChartDataTest();
+  //     } else {
+  //       this.getChartDataTest(m5);
+  //     }
+  //   }
+  // };
 
   createChart = (chartElement) => {
     if (!this.chartElement) {
@@ -152,6 +165,42 @@ export class Ticker {
     }
   };
 
+  // getChartDataTest = (interval) => {
+  //   if (this.state.apiTimeout) {
+  //     setTimeout(() => {
+  //       this.getChartDataTest(interval);
+  //     }, 1000 * 60 * apiTimeout + 100);
+  //   } else {
+  //     getSymbolChartData(this.name, interval, chartLimit[interval])
+  //       .then((data) => {
+  //         if (data.length) {
+  //           const map = {};
+  //           const array = [];
+  //           data.forEach((bar) => {
+  //             const candle = new Bar(bar);
+  //             candle.i = array.push(candle) - 1;
+  //             map[candle.time] = candle;
+  //             this.setPrecision(candle);
+  //           });
+  //           this.chartData[interval] = {map, array};
+  //           if (interval === m5) {
+  //             const lastIndex = this.chartData[m5].array.length - 1;
+  //             this.price = this.chartData[m5].array[lastIndex].close;
+  //             this.setChartDataTest();
+  //             this.updateUI$.next(this);
+  //           }
+  //         }
+  //       })
+  //       .catch((e) => {
+  //         this.state.apiTimeout = true;
+  //         this.getChartDataTest(interval);
+  //         setTimeout(() => {
+  //           this.state.apiTimeout = false;
+  //         }, 1000 * 60 * apiTimeout);
+  //       });
+  //   }
+  // };
+
   openStream = () => {
     if (!this.stream) {
       try {
@@ -159,7 +208,7 @@ export class Ticker {
         Object.keys(methods).forEach((name) => {
           const streamName = this.name.toLowerCase() + methods[name];
           streamNames.push(this.name.toLowerCase() + methods[name]);
-          this.methodMap[streamName] = name;
+          this.method[streamName] = name;
         });
         this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
         this.stream.addEventListener('message', this.onStreamMessage);
@@ -180,10 +229,10 @@ export class Ticker {
   onStreamMessage = (e) => {
     if (e.data) {
       const data = JSON.parse(e.data);
-      if (data.data && data.stream && this.methodMap[data.stream]) {
-        const methodName = this.methodMap[data.stream];
-        if (methodName) {
-          this[methodName]?.(data.data);
+      if (data.data && data.stream && this.method[data.stream]) {
+        const name = this.method[data.stream];
+        if (this[name]) {
+          this[name](data.data);
         }
       }
     }
@@ -195,38 +244,60 @@ export class Ticker {
     setTimeout(this.openStream, 5000);
   }
 
+  // onChart = (update) => {
+  //   if (update?.k) {
+  //     const bar = new Bar(update.k);
+  //     this.price = bar.close;
+  //     const {array, map} = this.chartData?.[M5] || {};
+  //     if (!map[bar.time]) {
+  //       array.push(bar);
+  //       this.setAverageVolume();
+  //     }
+  //     map[bar.time] = bar;
+  //     if (this.chart) {
+  //       const {time, open, high, low, close, volume} = bar;
+  //       this.chart.updateData({
+  //         timestamp: time,
+  //         open,
+  //         high,
+  //         low,
+  //         close,
+  //         volume
+  //       });
+  //     }
+  //   }
+  // };
+
   onChart = (update) => {
-    if (update) {
-      if (update?.k?.t && update?.k?.o && update?.k?.h && update?.k?.l && update?.k?.c && update?.k?.v) {
-        const bar = new Bar(update.k);
-        this.price = bar.close;
-        const {array, map} = this.chartData?.[m5] || {};
-        if (!map[bar.time]) {
-          bar.i = array.push(bar) - 1;
-          this.setAverageVolume();
-        }
-        map[bar.time] = bar;
-        if (this.series) {
-          const {time, open, high, low, close} = bar;
-          this.series.update({
-            time: time / 1000,
-            open,
-            high,
-            low,
-            close,
-          });
-          this.price$?.next({high, low, time});
-        }
+    if (update?.k) {
+      const bar = new Bar(update.k);
+      this.price = bar.close;
+      const {array, map} = this.chartData?.[M5] || {};
+      if (!map[bar.time]) {
+        array.push(bar);
+        this.setAverageVolume();
+      }
+      map[bar.time] = bar;
+      if (this.series) {
+        const {time, open, high, low, close} = bar;
+        this.series.update({
+          time: time / 1000,
+          open,
+          high,
+          low,
+          close,
+        });
+        this.price$?.next({high, low, time});
       }
     }
   };
 
   onOrderBook = (update) => {
-    this.orderBook.onOrderBookMessage(update);
+    this.orderBook?.onOrderBookMessage(update);
   };
 
   onBestPrice = (update) => {
-    this.orderBook.onBestPrice(update);
+    this.orderBook?.onBestPrice(update);
   };
 
   setAverageVolume = () => {
@@ -271,8 +342,23 @@ export class Ticker {
     }
   };
 
+  // setChartDataTest = () => {
+  //   if (this.chart && this.chartData?.[m5]?.array) {
+  //     this.chart.applyNewData(this.chartData[m5].array.map((bar) => ({
+  //       timestamp: bar.time,
+  //       open: bar.open,
+  //       high: bar.high,
+  //       low: bar.low,
+  //       close: bar.close,
+  //       volume: bar.volume
+  //     })));
+  //     this.openStream();
+  //   }
+  // };
+
   setExtremes = (interval) => {
     const data = this.chartData?.[interval]?.array;
+    const minLevelAgeTime = Date.now() - (this.config?.minLevelAge || 0) * 1000 * 60 * 60;
     const series = this.series;
     if (data?.length && series) {
       let currentHigh = [0, 0];
@@ -288,7 +374,7 @@ export class Ticker {
           if (high > currentHigh[0]) {
             currentHigh = [high, time];
             highCreated = false;
-          } else if (high < currentHigh[0] && !highCreated) {
+          } else if (high < currentHigh[0] && !highCreated && currentHigh[1] < minLevelAgeTime) {
             new Level({
               interval,
               price: currentHigh[0],
@@ -301,7 +387,7 @@ export class Ticker {
           if (low < currentLow[0]) {
             currentLow = [low, time];
             lowCreated = false;
-          } else if (low > currentLow[0] && !lowCreated) {
+          } else if (low > currentLow[0] && !lowCreated && currentLow[1] < minLevelAgeTime) {
             new Level({
               interval,
               price: currentLow[0],

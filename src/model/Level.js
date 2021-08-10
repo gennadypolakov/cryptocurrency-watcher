@@ -34,11 +34,11 @@ export class Level {
   check = (update) => {
     const price = update[this.side];
     const {minLevelAge = 0, priceDistance = 1} = this.ticker?.config || {};
-    const absDelta = this.side === HIGH ? this.price - price : price - this.price;
+    const priceDelta = this.side === HIGH ? this.price - price : price - this.price;
     const currentTime = Date.now();
     const timeDelta = currentTime - (this.time || currentTime) - minLevelAge * 1000 * 60 * 60;
-    if (absDelta > 0) {
-      if (absDelta / price < priceDistance && timeDelta > 0 && this.isActual) {
+    if (priceDelta > 0) {
+      if (priceDelta / price < priceDistance && timeDelta > 0 && this.isActual) {
         if (!this.ticker.isTimeout && !this.viewed) {
           this.ticker?.state?.events$?.next(this);
         }
@@ -57,14 +57,14 @@ export class Level {
           lineStyle: this.isActual ? LineStyle.Solid : LineStyle.Dashed
         });
       }
-    } else if (absDelta < 0) {
-      if (!this.ticker?.levels?.[price]) {
-        const {ticker, side} = this;
-        new Level({price, side, ticker});
-      }
-      if (this.interval === M5) {
-        this.destroy();
-      } else {
+    } else if (priceDelta < 0) {
+      // if (!this.ticker?.levels?.[price]) {
+      //   const {ticker, side} = this;
+      //   new Level({price, side, ticker});
+      // }
+      // if (this.interval === M5) {
+      //   this.destroy();
+      // } else {
         if (this.blinkIntervalId) clearInterval(this.blinkIntervalId);
         delete this.blinkIntervalId;
         this.line?.applyOptions({
@@ -74,7 +74,7 @@ export class Level {
         });
         this.isActual = false;
         this.subscription?.unsubscribe();
-      }
+      // }
     }
   };
 
@@ -134,7 +134,7 @@ export class Level {
     if (this.price && this.ticker?.levels) {
       this.ticker.levels[this.price] = this;
     }
-    if (this.ticker?.price$) {
+    if (this.ticker.price$) {
       this.subscription = this.ticker.price$.subscribe(this.onPrice);
     }
   }

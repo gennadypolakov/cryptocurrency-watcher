@@ -28,7 +28,30 @@ export class Order {
     this.check();
   }
 
-  isInPriceRange = () => {
+  // getPriceDelta = () => {
+  //
+  // };
+
+  // isInPriceRange = () => {
+  //   const bestPrice = this.orderBook.bestPrice[this.side];
+  //   if (this.price && bestPrice) {
+  //     const delta = this.side === ASK ? this.price - bestPrice : bestPrice - this.price;
+  //     if (delta < 0) {
+  //       this.remove();
+  //     } else {
+  //       const priceDistance = this.ticker?.config?.priceDistance || 0;
+  //       if (delta / bestPrice <= priceDistance) {
+  //         return true;
+  //       } else {
+  //         this.removeLine();
+  //         return false;
+  //       }
+  //     }
+  //   }
+  //   return false;
+  // };
+
+  checkPrice = () => {
     const bestPrice = this.orderBook.bestPrice[this.side];
     if (this.price && bestPrice) {
       const delta = this.side === ASK ? this.price - bestPrice : bestPrice - this.price;
@@ -38,9 +61,19 @@ export class Order {
         const priceDistance = this.ticker?.config?.priceDistance || 0;
         if (delta / bestPrice <= priceDistance) {
           return true;
-        } else {
-          this.removeLine();
-          return false;
+        }
+      }
+    }
+    return false;
+  };
+
+  checkVolume = () => {
+    if (this.volume && this.ticker) {
+      const {averageVolume, config} = this.ticker;
+      if (averageVolume && config) {
+        const {minOrderPercentage = 2} = config;
+        if (this.volume >= averageVolume * minOrderPercentage) {
+          return true;
         }
       }
     }
@@ -48,33 +81,21 @@ export class Order {
   };
 
   check = (second = false) => {
-    if (!this.volume) {
-      this.removeLine();
-    } else {
-      if (this.isInPriceRange()) {
-        const {minOrderPercentage, orderTimeout} = this.ticker?.config || {};
-        const {averageVolume, isTimeout} = this.ticker || {};
-        if (this.volume >= averageVolume * minOrderPercentage) {
-          if (second) {
-            this.removeLine();
-            this.createLine();
-            if (!isTimeout && !this.viewed) this.ticker?.state?.events$?.next(this);
-          } else {
-            this.removeLine();
-            this.createLine();
-            if (orderTimeout) {
-              this.timeoutId = setTimeout(() => {
-                this.check(true);
-              }, orderTimeout * 60 * 1000);
-            }
+      if (this.checkVolume() && this.checkPrice()) {
+        this.removeLine();
+        this.createLine();
+        if (second) {
+          if (!this.ticker?.isTimeout && !this.viewed) {
+            this.ticker?.state?.events$?.next(this);
           }
         } else {
-          this.removeLine();
+          this.timeoutId = setTimeout(() => {
+            this.check(true);
+          }, (this.ticker?.config?.orderTimeout || 0) * 60 * 1000);
         }
       } else {
         this.removeLine();
       }
-    }
   };
 
   checkLine = (checkId) => {
@@ -101,9 +122,9 @@ export class Order {
 
   createLine = () => {
     if (
-      !this.orderBook.lines[this.side][this.price] &&
       this.side &&
       this.price &&
+      !this.orderBook.lines[this.side][this.price] &&
       this.volume
     ) {
       if (this.line) {
@@ -118,9 +139,7 @@ export class Order {
           lineWidth: 1,
           title: this.volume
         });
-        if (this.orderBook.lines?.[this.side]) {
-          this.orderBook.lines[this.side][this.price] = this;
-        }
+        this.orderBook.lines[this.side][this.price] = this;
       }
     }
 
@@ -129,7 +148,7 @@ export class Order {
   remove = () => {
     if (this.removeTimeoutId) clearTimeout(this.removeTimeoutId);
     this.removeLine();
-    if (this.side && this.price && this.orderBook?.[this.side] && this.price in this.orderBook[this.side]) {
+    if (this.orderBook?.[this.side]?.[this.price]) {
       delete this.orderBook[this.side][this.price];
     }
     const {state, name} = this.ticker || {};

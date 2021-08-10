@@ -21,9 +21,17 @@ export const Chart = (props) => {
     ticker.enableChart(false);
   }, [ticker]);
 
-  useEffect(() => {
-    ticker.createChart(ref.current);
-  }, [ticker]);
+  // useEffect(() => {
+  //   ticker.createChartTest(ref.current);
+  // }, [ticker]);
+
+  // useEffect(() => {
+  //   ticker.updateUI$.subscribe((update) => {
+  //     if (update?.chart) {
+  //       setLoading(false);
+  //     }
+  //   });
+  // }, [ticker]);
 
   useEffect(() => {
     ticker.updateUI$.subscribe((update) => {
@@ -81,6 +89,7 @@ export const Chart = (props) => {
           </div>
         </div>
         <div ref={ref} />
+        {/*<div ref={ref} style={{display: 'flex', flex: '1 1', height: '400px'}}/>*/}
         <Loader loading={loading} />
       </div>
       <Modal
