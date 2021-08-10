@@ -9,4 +9,5 @@ html, body, #root {
   display: flex;
   flex-flow: row wrap;
   padding-bottom: 20px;
+  height: 100%;
 }

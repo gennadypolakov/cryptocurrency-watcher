@@ -25,6 +25,9 @@ export class State {
   loading = {};
   favorites = [];
 
+  clientWidth;
+  width;
+
   dispatch;
 
   constructor({dispatch, futures, spot, tickers} = {}) {
@@ -32,14 +35,6 @@ export class State {
     this.futures = futures;
     this.spot = spot;
     this.tickers = tickers;
-    if (!this.config) {
-      this.config = new Settings(this);
-    }
-    if (!this.spot) {
-      this.getSpot();
-    }
-    this.setNotification();
-    this.events$.subscribe(this.onEvent);
     // setInterval(() => {
     //   console.log('priceSubscribers', this.priceSubscribers);
     //   console.log('orderSubscribers', this.orderSubscribers);
@@ -57,6 +52,35 @@ export class State {
     //   }, 2000)
     // }, 60000);
   }
+
+  init = () => {
+    if (this.clientWidth) {
+      if (!this.config) {
+        this.config = new Settings(this);
+        if (this.clientWidth < 600) {
+          this.width = this.clientWidth - 12;
+        } else if ((this.clientWidth - 12 * this.config.columnCount) / this.config.columnCount < 400) {
+          this.width = 400;
+        } else {
+          this.width = (this.clientWidth - 12 * this.config.columnCount) / this.config.columnCount;
+        }
+
+        if (!this.spot) {
+          this.getSpot();
+        }
+        this.setNotification();
+        this.events$.subscribe(this.onEvent);
+      }
+    }
+  };
+
+  setWidth = (width) => {
+    if (width) {
+      this.clientWidth = width;
+      this.init();
+      this.dispatch(this);
+    }
+  };
 
   onEvent = (event) => {
     if (event && event.price && event.ticker?.name) {

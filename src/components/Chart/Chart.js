@@ -1,5 +1,5 @@
 import s from './Chart.module.scss';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {Modal} from 'antd';
 import {Settings} from '../Settings/Settings';
 import {CloseOutlined, PoweroffOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
@@ -8,11 +8,21 @@ import {Loader} from '../Loader/Loader';
 export const Chart = (props) => {
   const ref = useRef();
   const {ticker} = props;
-  const {name: symbol} = ticker;
+  const {name: symbol, state} = ticker;
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [acceptVisible, setAcceptVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [chart, setChart] = useState(false);
+  const {width, height} = useMemo(() => {
+    let width = (state?.width || 400);
+    let height = (width - 2) * 0.7 + 32;
+    width = width + 'px';
+    if (height > window.innerHeight) {
+      height = window.innerHeight - 12;
+    }
+    height = height + 'px';
+    return {width, height};
+  }, [state?.width]);
 
   const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
 
@@ -59,7 +69,7 @@ export const Chart = (props) => {
 
   return (
     <>
-      <div className={s.chart} id={symbol}>
+      <div className={s.chart} id={symbol} style={{width, height}}>
         <div className={s.header}>
           <span>{symbol}</span>
           <div className={s.controls}>

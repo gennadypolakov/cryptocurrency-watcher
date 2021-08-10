@@ -1,5 +1,5 @@
 import {OrderBook} from './OrderBook';
-import {createChart} from 'lightweight-charts';
+import {createChart as createChartFn} from 'lightweight-charts';
 import {getSymbolChartData} from '../api';
 import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
@@ -76,7 +76,12 @@ export class Ticker {
       this.chartElement = chartElement;
     }
     if (!this.chart && this.chartElement) {
-      this.chart = createChart(this.chartElement, {width: 580, height: 465});
+      const width = (this.state.width || 400) - 2;
+      let height = width * 0.7;
+      if (height + 12 + 32 > window.innerHeight) {
+        height = window.innerHeight - 12 - 32;
+      }
+      this.chart = createChartFn(this.chartElement, {width, height});
     }
     if (!this.series && this.chart) {
       this.series = this.chart.addCandlestickSeries();
@@ -86,6 +91,21 @@ export class Ticker {
         this.getChartData(m5);
       }
     }
+  };
+
+  updateChart = (callback) => {
+    setTimeout(() => {
+      if (this.chart) {
+        const width = (this.state.width || 400) - 2;
+        let height = width * 0.7;
+        if (height + 12 + 32 > window.innerHeight) {
+          height = window.innerHeight - 12 - 32;
+        }
+        this.chart.resize(width, height);
+        this.setChartOptions();
+        callback?.();
+      }
+    });
   };
 
   disable = (updateConfig = true) => {
@@ -327,6 +347,13 @@ export class Ticker {
         low: bar.low,
         close: bar.close,
       })));
+      this.setChartOptions();
+      this.openStream();
+    }
+  };
+
+  setChartOptions = () => {
+    if (this.chart && this.series) {
       this.chart.timeScale().setVisibleRange({
         from: (Date.now() - 60 * 60 * 12 * 1000) / 1000,
         to: Date.now() / 1000,
@@ -343,8 +370,6 @@ export class Ticker {
           minMove: this.minMove,
         },
       });
-      this.openStream();
-      // this.openChartStream();
     }
   };
 

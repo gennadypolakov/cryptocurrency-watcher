@@ -33,3 +33,4 @@ export const minLevelAge = 3; // не сигнализировать об уро
 export const removeTimeout = 1; // таймаут проверки цены лимитного ордера относительно текущей цены, минуты
 export const removeOrderPercentage = 0.001; // доля от цены на которую она превысила цену ордера, неудаленного по какой-либо причине
 export const apiTimeout = 2; // таймаут запросов при бане апи в минутах
+export const columnCount = 3; // количество графиков по ширине

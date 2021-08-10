@@ -1,10 +1,11 @@
 import {InfoCircleOutlined} from '@ant-design/icons';
-import {Button, Form, Input, Tooltip} from 'antd';
+import {Button, Form, Input, Radio, Tooltip} from 'antd';
 import {isEqual} from 'lodash';
 
 import s from './Settings.module.scss';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {defaultConfig} from '../../model/Settings';
+import {columnCount} from '../../config';
 
 export const Settings = (props) => {
   const {state, name} = props;
@@ -17,6 +18,19 @@ export const Settings = (props) => {
   const averageVolume = name ? Math.round(state.tickers[name].averageVolume) : null;
   const averageVolumeTime = tickerConfig?.last5mCount * 5;
   const minOrderVolume = tickerConfig ? Math.round(averageVolume * tickerConfig?.minOrderPercentage) : null;
+  const clientWidth = state?.clientWidth;
+
+  const columnCounts = useMemo(() => {
+    const counts = [1];
+    if (clientWidth) {
+      let i = 2;
+      while ((clientWidth - 12 * i) / i > 400) {
+        counts.push(i);
+        i++;
+      }
+    }
+    return counts;
+  }, [clientWidth]);
 
   useEffect(() => {
     if (name) {
@@ -43,6 +57,7 @@ export const Settings = (props) => {
   }, [tickerConfig]);
 
   const onFinish = (values) => {
+    console.log(values);
     const newConfig = {};
     Object.keys(values).forEach((name) => {
       newConfig[name] = Number(values[name]);
@@ -84,6 +99,16 @@ export const Settings = (props) => {
         onFinish={onFinish}
         onFieldsChange={() => setDisabled(false)}
       >
+        {!name && columnCounts.length > 1
+          ? <Form.Item
+            name="columnCount"
+            label="Графиков в ширину"
+          >
+            <Radio.Group>
+              {columnCounts.map((n) => <Radio.Button value={n} key={n}>{n}</Radio.Button>)}
+            </Radio.Group>
+          </Form.Item>
+          : null}
         <Form.Item name="priceDistance">
           <Input
             addonBefore="Расстояние до уровня или ордера"

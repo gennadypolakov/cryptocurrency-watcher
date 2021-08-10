@@ -1,9 +1,9 @@
 .chart {
-    width: 620px;
-    height: 520px;
+    height: auto;
     margin: 5px;
-    border: solid 1px gray;
+    border: solid 1px #d4d4d4;
     position: relative;
+    box-shadow: 0 5px 8px 0 rgba(34, 60, 80, 0.2);
 }
 
 .header {

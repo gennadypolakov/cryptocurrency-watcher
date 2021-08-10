@@ -1,5 +1,6 @@
 import {
   checkedTimout,
+  columnCount,
   last5mCount,
   minLevelAge,
   minOrderPercentage,
@@ -13,6 +14,7 @@ import {Subject} from 'rxjs';
 
 export const defaultConfig = {
   checkedTimout,
+  columnCount,
   last5mCount,
   minLevelAge,
   minOrderPercentage,
@@ -46,6 +48,13 @@ export class Settings {
   };
   set checkedTimout(v){
     this.map.checkedTimout = v;
+  };
+
+  get columnCount() {
+    return this.map.columnCount;
+  };
+  set columnCount(v){
+    this.map.columnCount = v;
   };
 
   get last5mCount() {
@@ -148,15 +157,27 @@ export class Settings {
   update = (config) => {
     if (config) {
       const {action, ...rest} = config;
+      const updateChart = this.columnCount !== config.columnCount;
+      if (updateChart) {
+        this.state.width = (this.state.clientWidth - 12 * config.columnCount) / config.columnCount;
+      }
       this.map = rest;
       if (!action) this.save();
       const streamValue = {...rest};
       if (this.ticker) {
-        this.ticker.updateLevels();
-        if (action) {
-          localStorage.removeItem(this.ticker.name);
+        const callback = () => {
+          this.ticker.updateLevels();
+          if (action) {
+            localStorage.removeItem(this.ticker.name);
+          }
+          streamValue.action = this.ticker.name;
+          this.config$?.next(streamValue);
+        };
+        if (updateChart) {
+          this.ticker?.updateChart(callback);
+        } else {
+          callback();
         }
-        streamValue.action = this.ticker.name;
       } else {
         streamValue.action = 'update';
       }
