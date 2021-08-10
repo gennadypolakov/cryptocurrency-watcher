@@ -1,7 +1,7 @@
 import {OrderBook} from './OrderBook';
 import {createChart} from 'lightweight-charts';
 import {getSymbolChartData} from '../api';
-import {apiTimeout, chartLimit, d1, h1, m5, minLevelAge} from '../config';
+import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
@@ -17,7 +17,7 @@ const nextInterval = {
 const methods = {
   onOrderBook: '@depth@1000ms',
   onChart: '@kline_5m',
-  onBestPrice: '@bookTicker'
+  onBestPrice: '@bookTicker',
 };
 
 export class Ticker {
@@ -26,7 +26,6 @@ export class Ticker {
   chart;
   chartData = {};
   chartElement;
-  chartStream;
   config;
   levels = {};
   highs;
@@ -44,13 +43,15 @@ export class Ticker {
   method = {};
   updateUI$ = new Subject();
   isActive = true;
+  minLevelAge;
 
   constructor(name, state) {
     this.name = name;
     if (state) {
       this.state = state;
     }
-    this.config = new Settings(state, this.name);
+    this.config = new Settings(state, this);
+    this.minLevelAge = this.config.minLevelAge;
   }
 
   // createChartTest = (chartElement) => {
@@ -115,7 +116,7 @@ export class Ticker {
   enableChart = (enable = true) => {
     this.chart?.applyOptions({
       handleScroll: enable,
-      handleScale: enable
+      handleScale: enable,
     });
   };
 
@@ -151,8 +152,7 @@ export class Ticker {
           if (nextInterval[interval]) {
             this.getChartData(nextInterval[interval]);
           } else {
-            this.setExtremes(h1);
-            this.setExtremes(d1);
+            this.updateLevels(true);
           }
         })
         .catch((e) => {
@@ -236,13 +236,13 @@ export class Ticker {
         }
       }
     }
-  }
+  };
 
   onStreamError = (e) => {
     console.log(this.name, e);
     this.closeStream();
     setTimeout(this.openStream, 5000);
-  }
+  };
 
   // onChart = (update) => {
   //   if (update?.k) {
@@ -356,9 +356,25 @@ export class Ticker {
   //   }
   // };
 
+  updateLevels = (force = false) => {
+    if (
+      (
+        this.config?.minLevelAge !== undefined &&
+        this.minLevelAge !== this.config.minLevelAge
+      ) || force
+    ) {
+      this.minLevelAge = this.config.minLevelAge;
+      Object.keys(this.levels).forEach((price) => {
+        this.levels[price].destroy();
+      });
+      this.setExtremes(h1);
+      this.setExtremes(d1);
+    }
+  };
+
   setExtremes = (interval) => {
     const data = this.chartData?.[interval]?.array;
-    const minLevelAge = interval === D1 ? 24 : (this.config?.minLevelAge || 1)
+    const minLevelAge = interval === D1 ? 24 : (this.config?.minLevelAge || 1);
     const minLevelAgeTime = Date.now() - minLevelAge * 1000 * 60 * 60;
     const series = this.series;
     if (data?.length && series) {

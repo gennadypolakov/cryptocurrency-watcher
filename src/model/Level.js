@@ -4,13 +4,14 @@ import {LineStyle} from 'lightweight-charts';
 
 export class Level {
 
+  configSubscription;
   currentPrice;
   interval;
   isActual = true;
   line;
   price;
+  priceSubscription;
   side;
-  subscription;
   time;
   ticker;
   viewed;
@@ -73,7 +74,7 @@ export class Level {
           lineStyle: LineStyle.Dashed
         });
         this.isActual = false;
-        this.subscription?.unsubscribe();
+        this.priceSubscription?.unsubscribe();
       // }
     }
   };
@@ -121,6 +122,7 @@ export class Level {
     if (this.price && this.ticker?.levels?.[this.price]) {
       delete this.ticker.levels[this.price];
     }
+    this.priceSubscription?.unsubscribe();
   };
 
   onPrice = (price) => {
@@ -135,7 +137,7 @@ export class Level {
       this.ticker.levels[this.price] = this;
     }
     if (this.ticker.price$) {
-      this.subscription = this.ticker.price$.subscribe(this.onPrice);
+      this.priceSubscription = this.ticker.price$.subscribe(this.onPrice);
     }
   }
 

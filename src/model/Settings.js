@@ -116,7 +116,7 @@ export class Settings {
   }
 
   reset = () => {
-    localStorage.removeItem(this.ticker || 'config');
+    localStorage.removeItem(this.ticker.name || 'config');
     if (this.ticker) {
       this.map = {...this.state.config.map};
     } else {
@@ -124,7 +124,7 @@ export class Settings {
     }
     this.config$?.next({
       ...this.map,
-      action: this.ticker || 'reset'
+      action: this.ticker.name || 'reset'
     });
   };
 
@@ -139,7 +139,7 @@ export class Settings {
   };
 
   save = () => {
-    localStorage.setItem(this.ticker || 'config', JSON.stringify(this.map));
+    localStorage.setItem(this.ticker?.name || 'config', JSON.stringify(this.map));
     if (this.tickers) {
       localStorage.setItem('tickers', JSON.stringify(this.tickers));
     }
@@ -152,10 +152,11 @@ export class Settings {
       if (!action) this.save();
       const streamValue = {...rest};
       if (this.ticker) {
+        this.ticker.updateLevels();
         if (action) {
-          localStorage.removeItem(this.ticker);
+          localStorage.removeItem(this.ticker.name);
         }
-        streamValue.action = this.ticker;
+        streamValue.action = this.ticker.name;
       } else {
         streamValue.action = 'update';
       }
