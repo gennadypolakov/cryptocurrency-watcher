@@ -116,7 +116,7 @@ export class Settings {
   }
 
   reset = () => {
-    localStorage.removeItem(this.ticker.name || 'config');
+    localStorage.removeItem(this.ticker?.name || 'config');
     if (this.ticker) {
       this.map = {...this.state.config.map};
     } else {
@@ -124,7 +124,7 @@ export class Settings {
     }
     this.config$?.next({
       ...this.map,
-      action: this.ticker.name || 'reset'
+      action: this.ticker?.name || 'reset'
     });
   };
 
