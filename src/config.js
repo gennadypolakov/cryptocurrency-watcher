@@ -23,13 +23,13 @@ export const chartLimit = {
   [h1]: 500,
   [d1]: 500
 };
-export const minOrderPercentage = 5; // доля от среднего 5-минутного объема
-export const last5mCount = 5; // количество 5-минуток для среднего объема
+export const minOrderPercentage = 1; // доля от среднего 5-минутного объема
+export const last5mCount = 10; // количество 5-минуток для среднего объема
 export const priceDistance = 0.005; // расстояние до цены в долях от цены
 export const checkedTimout = 1; // время через которое просмотренный тикер становится не просмотренным
-export const notificationTimeout = 5; // таймаут уведомлений в минутах
+export const notificationTimeout = 10; // таймаут уведомлений в минутах
 export const orderTimeout = 0.5; // количество минут, по истечение которых заявка отобразится на графике
-export const minLevelAge = 5; // не сигнализировать об уровнях младше n часов
+export const minLevelAge = 3; // не сигнализировать об уровнях младше n часов
 export const removeTimeout = 1; // таймаут проверки цены лимитного ордера относительно текущей цены, минуты
 export const removeOrderPercentage = 0.001; // доля от цены на которую она превысила цену ордера, неудаленного по какой-либо причине
 export const apiTimeout = 2; // таймаут запросов при бане апи в минутах

@@ -14,7 +14,7 @@ export class Bar {
       this.interval = interval;
       this.create(data);
     } else {
-      this.streamUpdate(data);
+      this.update(data);
     }
   }
 
@@ -27,7 +27,7 @@ export class Bar {
     this.volume = Number(data[5]);
   }
 
-  streamUpdate(data) {
+  update(data) {
     this.time = data.t;
     this.open = Number(data.o);
     this.high = Number(data.h);

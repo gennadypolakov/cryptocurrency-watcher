@@ -34,7 +34,6 @@ export class Ticker {
   name;
   orderBook;
   precision = 2;
-  price;
   price$ = new Subject();
   series;
   state;
@@ -139,8 +138,6 @@ export class Ticker {
             });
             this.chartData[interval] = {map, array};
             if (interval === m5) {
-              const lastIndex = this.chartData[m5].array.length - 1;
-              this.price = this.chartData[m5].array[lastIndex].close;
               this.setChartData();
               this.setAverageVolume();
               if (!this.orderBook) {
@@ -269,25 +266,34 @@ export class Ticker {
   // };
 
   onChart = (update) => {
-    if (update?.k) {
-      const bar = new Bar(update.k);
-      this.price = bar.close;
+    if (update?.k?.t) {
+      const time = update.k.t;
       const {array, map} = this.chartData?.[M5] || {};
-      if (!map[bar.time]) {
-        array.push(bar);
-        this.setAverageVolume();
-      }
-      map[bar.time] = bar;
-      if (this.series) {
-        const {time, open, high, low, close} = bar;
-        this.series.update({
-          time: time / 1000,
-          open,
-          high,
-          low,
-          close,
-        });
-        this.price$?.next({high, low, time});
+      if (array && map) {
+        let bar;
+        if (map[time]) {
+          bar = map[time];
+          bar.update(update.k);
+        } else {
+          bar = new Bar(update.k);
+          map[time] = bar;
+          array.push(bar);
+          this.setAverageVolume();
+        }
+        if (this.series) {
+          const {time, open, high, low, close} = bar;
+          this.series.update({
+            time: time / 1000,
+            open,
+            high,
+            low,
+            close,
+          });
+          this.price$?.next({high, low, time});
+          // if (this.state.favorites.some((name) => this.name === name)) {
+          //   console.log(this.name, array, bar, this.averageVolume);
+          // }
+        }
       }
     }
   };
@@ -303,12 +309,12 @@ export class Ticker {
   setAverageVolume = () => {
     const data = this.chartData?.[m5]?.array;
     let count = this.config?.last5mCount || 10;
-    if (data?.length) {
+    if (data?.length && data.length > 1) {
       if (count + 1 > data.length) count = data.length - 1;
-      if (count && count > 0) {
-        const last5m = data.slice(data.length - count - 1, data.length - 1)?.map((bar) => bar.volume);
-        this.averageVolume = last5m.reduce((acc, value) => acc + value, 0) / count;
-      }
+      const lastVolumes = data.slice(data.length - count - 1, data.length - 1)?.map((bar) => bar.volume);
+      this.averageVolume = lastVolumes.reduce((acc, value) => acc + value, 0) / count;
+    } else {
+      this.averageVolume = 0;
     }
   };
 
