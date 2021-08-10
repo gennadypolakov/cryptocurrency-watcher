@@ -5,7 +5,7 @@ import {apiTimeout, chartLimit, d1, h1, m5, minLevelAge} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
-import {barPrices, HIGH, LOW, M5} from '../constants';
+import {barPrices, D1, HIGH, LOW, M5} from '../constants';
 import {Level} from './Level';
 // import {init, dispose} from 'klinecharts';
 
@@ -358,7 +358,8 @@ export class Ticker {
 
   setExtremes = (interval) => {
     const data = this.chartData?.[interval]?.array;
-    const minLevelAgeTime = Date.now() - (this.config?.minLevelAge || 0) * 1000 * 60 * 60;
+    const minLevelAge = interval === D1 ? 24 : (this.config?.minLevelAge || 1)
+    const minLevelAgeTime = Date.now() - minLevelAge * 1000 * 60 * 60;
     const series = this.series;
     if (data?.length && series) {
       let currentHigh = [0, 0];
