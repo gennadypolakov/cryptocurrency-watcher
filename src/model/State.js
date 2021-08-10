@@ -76,6 +76,20 @@ export class State {
     }
   }
 
+  removeEvent = (name, price, type) => {
+    if (name && price && type && this.events[name]?.[type]?.[price]) {
+      delete this.events[name][type][price];
+      const levels = this.events[name].level;
+      const orders = this.events[name].order;
+      const levelsCount = levels ? Object.keys(levels).length : 0;
+      const ordersCount = orders ? Object.keys(orders).length : 0;
+      if (!levelsCount && !ordersCount) {
+        delete this.events[name];
+        this.dispatch(this);
+      }
+    }
+  };
+
   getSpot = () => {
     if (this.apiTimeout) {
       setTimeout(this.getSpot, 1000 * 60 * apiTimeout + 100);

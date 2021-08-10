@@ -152,8 +152,8 @@ export class Order {
       delete this.orderBook[this.side][this.price];
     }
     const {state, name} = this.ticker || {};
-    if (state && name && state.events?.[name]?.order?.[this.price]) {
-      delete state.events[name].order[this.price];
+    if (state && name && this.price) {
+      state.removeEvent(name, this.price, 'order');
     }
   };
 
