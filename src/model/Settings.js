@@ -160,32 +160,34 @@ export class Settings {
 
   update = (config) => {
     if (config) {
-      const {action, ...rest} = config;
-      const updateChart = this.columnCount !== config.columnCount;
-      if (!this.ticker && updateChart) {
-        this.state.width = (this.state.clientWidth - 12 * config.columnCount) / config.columnCount;
-      }
-      this.map = rest;
-      if (!action) this.save();
+      const {action, updateChart, ...rest} = config;
       const streamValue = {...rest};
       if (this.ticker) {
-        const callback = () => {
-          this.ticker.updateLevels();
-          if (action) {
-            localStorage.removeItem(this.ticker.name);
-          }
-          streamValue.action = this.ticker.name;
-          this.config$?.next(streamValue);
-        };
         if (updateChart) {
-          this.ticker?.updateChart(callback);
-        } else {
-          callback();
+          this.ticker?.updateChart();
+        }
+        const savedConfig = localStorage.getItem(this.ticker.name);
+        if (!action || (action && !savedConfig)) {
+          this.ticker.updateLevels();
+          streamValue.action = this.ticker.name;
+          this.map = rest;
+          this.config$?.next(streamValue);
         }
       } else {
-        streamValue.action = 'update';
+        const updateChart = config.columnCount && this.columnCount !== config.columnCount;
+        if (updateChart) {
+          this.state.width = (this.state.clientWidth - 12 * config.columnCount) / config.columnCount;
+        }
+        this.map = rest;
+        this.config$?.next({
+          ...streamValue,
+          action: 'update',
+          updateChart
+        });
       }
-      this.config$?.next(streamValue);
+      if (!action) {
+        this.save();
+      }
       this.state?.dispatch?.(this.state);
     }
   };
@@ -196,7 +198,7 @@ export class Settings {
       if (action) {
         setTimeout(() => {
           this[action]?.(config);
-        }, 0);
+        });
       }
     }
   };
