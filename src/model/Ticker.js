@@ -71,6 +71,8 @@ export class Ticker {
   //   }
   // };
 
+
+
   createChart = (chartElement) => {
     if (!this.chartElement) {
       this.chartElement = chartElement;

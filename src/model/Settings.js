@@ -116,7 +116,7 @@ export class Settings {
       this.tickers = JSON.parse(localStorage.getItem('tickers')) || {};
     }
     this.config$ = new Subject();
-    this.setConfig(ticker);
+    this.setConfig(ticker?.name);
   }
 
   disable = () => {
@@ -142,6 +142,10 @@ export class Settings {
     if (configJson) {
       this.isDefault = false;
       this.map = JSON.parse(configJson);
+      if (!this.columnCount) {
+        this.columnCount = columnCount;
+        this.save();
+      }
     } else if (ticker) {
       this.map = {...this.state.config.map};
     }

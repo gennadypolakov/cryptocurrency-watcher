@@ -16,7 +16,7 @@ export const App = () => {
 
   useEffect(() => {
     if (!state) {
-      setStateWrapper({state: new State({dispatch})});
+      setStateWrapper({state: new State(dispatch)});
     }
   }, [state, dispatch]);
 

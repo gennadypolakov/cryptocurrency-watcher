@@ -24,17 +24,15 @@ export class State {
   counter = 0;
   loading = {};
   favorites = [];
+  firstStart = false;
 
   clientWidth;
   width;
 
   dispatch;
 
-  constructor({dispatch, futures, spot, tickers} = {}) {
+  constructor(dispatch) {
     this.dispatch = dispatch;
-    this.futures = futures;
-    this.spot = spot;
-    this.tickers = tickers;
     // setInterval(() => {
     //   console.log('priceSubscribers', this.priceSubscribers);
     //   console.log('orderSubscribers', this.orderSubscribers);
@@ -53,18 +51,26 @@ export class State {
     // }, 60000);
   }
 
+  getWidth = () => {
+    let count = this.config?.columnCount;
+    if (this.clientWidth < 600) {
+      this.width = this.clientWidth - 12;
+    } else if (count) {
+      if ((this.clientWidth - 12 * count) / count < 400) {
+        while((this.clientWidth - 12 * count) / count < 400 && count > 1) {
+          count--;
+        }
+      }
+      this.width = (this.clientWidth - 12 * count) / count;
+    }
+    return this.width;
+  };
+
   init = () => {
     if (this.clientWidth) {
       if (!this.config) {
         this.config = new Settings(this);
-        if (this.clientWidth < 600) {
-          this.width = this.clientWidth - 12;
-        } else if ((this.clientWidth - 12 * this.config.columnCount) / this.config.columnCount < 400) {
-          this.width = 400;
-        } else {
-          this.width = (this.clientWidth - 12 * this.config.columnCount) / this.config.columnCount;
-        }
-
+        this.getWidth();
         if (!this.spot) {
           this.getSpot();
         }
@@ -78,7 +84,7 @@ export class State {
     if (width) {
       this.clientWidth = width;
       this.init();
-      this.dispatch(this);
+      this.dispatch?.(this);
     }
   };
 
@@ -167,22 +173,37 @@ export class State {
             });
             if (this.tickerNames?.length) {
               if (this.config.tickers) {
-                Object.keys(this.config.tickers)
-                  .filter((name) => !this.config.tickers[name].isNew)
-                  .forEach((name) => {
-                    if (!this.futures[name]) {
-                      delete this.config.tickers[name];
-                      localStorage.removeItem(name);
-                    }
-                  });
+                const savedTickersNames = Object.keys(this.config.tickers)
+                  .filter((name) => !this.config.tickers[name].isNew);
+                if (!savedTickersNames.length) {
+                  this.firstStart = true;
+                }
+                savedTickersNames.forEach((name) => {
+                  if (!this.futures[name]) {
+                    delete this.config.tickers[name];
+                    localStorage.removeItem(name);
+                  }
+                });
                 Object.keys(this.config.tickers)
                   .forEach((name) => {
                     this.config.tickers[name].isNew = false;
                   });
                 this.config.save();
               }
-              this.tickerNames = Object.keys(this.config.tickers)
-                .filter((name) => this.config.tickers[name].isActive).sort();
+              const tickerNames = Object.keys(this.config.tickers);
+              if (this.firstStart) {
+                this.tickerNames = tickerNames
+                  .sort()
+                  .slice(0, 6);
+                this.tickerNames.forEach((name) => {
+                  this.config.tickers[name].isActive = true;
+                });
+                this.config.save();
+              } else {
+                this.tickerNames = tickerNames
+                  .filter((name) => this.config.tickers[name].isActive)
+                  .sort();
+              }
               this.loading = {};
               this.tickerNames.forEach((name) => {
                 this.loading[name] = true;
