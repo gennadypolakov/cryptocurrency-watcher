@@ -19,7 +19,15 @@ export const Favorites = (props) => {
   }, [ref, state, state?.favorites?.length]);
 
   const goTo = (name) => () => {
-    window.location.href = `/#${name}`;
+    // window.location.href = `/#${name}`;
+    const chart = state?.tickers?.[name]?.chartContainer;
+    if (chart) {
+      chart.scrollIntoView({behavior: 'smooth'});
+      chart.classList.add(s.blinkChartBorder);
+      setTimeout(() => {
+        chart.classList.remove(s.blinkChartBorder);
+      }, 3000);
+    }
   };
 
   const remove = (name) => (e) => {

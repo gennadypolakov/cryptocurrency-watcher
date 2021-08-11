@@ -2,17 +2,19 @@
     display: flex;
     flex-flow: row wrap;
     align-items: center;
-    padding: 10px;
-    background-color: rgba(255,255,255, 0.8);
+    padding: 8px 90px 5px 8px;
+    background-color: rgba(187,187,187, 0.8);
     position: fixed;
     bottom: 0;
     left: 0;
-    right: 130px;
+    right: 0;
+    //padding-right: 130px;
     height: auto;
-    z-index: 100;
+    z-index: 1000;
 
     & > * {
-        margin-right: 8px;
+        margin-right: 5px;
+        margin-bottom: 3px;
 
         &:last-child {
             margin-right: 0;
@@ -37,5 +39,16 @@
 .remove {
     &:hover {
         color: red;
+    }
+}
+
+.blinkChartBorder {
+    animation: blinkChartBorder 0.5s step-end infinite alternate;
+}
+
+@keyframes blinkChartBorder {
+    50% {
+        border-color: #ff0000;
+        box-shadow: 0 5px 8px 0 rgba(255, 0, 0, 0.4);
     }
 }

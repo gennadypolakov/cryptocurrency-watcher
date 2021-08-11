@@ -6,9 +6,10 @@ import {CloseOutlined, PoweroffOutlined, SettingOutlined, StarFilled, StarOutlin
 import {Loader} from '../Loader/Loader';
 
 export const Chart = (props) => {
-  const ref = useRef();
+  const chartRef = useRef();
+  const chartContainerRef = useRef();
   const {ticker} = props;
-  const {name: symbol, state} = ticker;
+  const {name: symbol, state} = ticker || {};
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [acceptVisible, setAcceptVisible] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,18 @@ export const Chart = (props) => {
   const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
 
   useEffect(() => {
-    ticker.createChart(ref.current);
+    if (ticker) {
+      ticker.chartContainer = chartContainerRef.current;
+    }
+    return () => {
+      if (ticker.chartContainer) {
+        delete ticker.chartContainer;
+      }
+    };
+  }, [ticker]);
+
+  useEffect(() => {
+    ticker.createChart(chartRef.current);
     ticker.enableChart(false);
   }, [ticker]);
 
@@ -69,7 +81,12 @@ export const Chart = (props) => {
 
   return (
     <>
-      <div className={s.chart} id={symbol} style={{width, height}}>
+      <div
+        className={s.chart}
+        id={symbol}
+        ref={chartContainerRef}
+        style={{width, height}}
+      >
         <div className={s.header}>
           <span>{symbol}</span>
           <div className={s.controls}>
@@ -98,7 +115,7 @@ export const Chart = (props) => {
             />
           </div>
         </div>
-        <div ref={ref} />
+        <div ref={chartRef} />
         {/*<div ref={ref} style={{display: 'flex', flex: '1 1', height: '400px'}}/>*/}
         <Loader loading={loading} />
       </div>

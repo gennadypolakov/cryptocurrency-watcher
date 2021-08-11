@@ -119,8 +119,8 @@ export class OrderBook {
   };
 
   setOrderBook = () => {
-    if (this.state.apiTimeout) {
-      setTimeout(this.setOrderBook, 1000 * 60 * apiTimeout + 100);
+    if (this.state?.apiTimeout) {
+      this.state.onError(this.setOrderBook, '');
     } else {
       this.ask = {};
       this.bid = {};
@@ -149,13 +149,8 @@ export class OrderBook {
             this.syncOrderBook();
           }
         })
-        .catch((e) => {
-          console.log(e.response);
-          this.state.apiTimeout = true;
-          this.setOrderBook();
-          setTimeout(() => {
-            this.state.apiTimeout = false;
-          }, 1000 * 60 * apiTimeout);
+        .catch(() => {
+          this.state.onError(this.setOrderBook);
         });
     }
   };

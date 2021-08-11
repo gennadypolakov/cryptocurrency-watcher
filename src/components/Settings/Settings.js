@@ -57,7 +57,6 @@ export const Settings = (props) => {
   }, [tickerConfig]);
 
   const onFinish = (values) => {
-    console.log(values);
     const newConfig = {};
     Object.keys(values).forEach((name) => {
       newConfig[name] = Number(values[name]);

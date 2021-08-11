@@ -8,6 +8,7 @@ import {Settings} from './Settings';
 import {Level} from './Level';
 import {Order} from './Order';
 import {apiTimeout} from '../config';
+import {notification} from 'antd';
 
 export class State {
   apiTimeout;
@@ -23,13 +24,26 @@ export class State {
   tickers;
   counter = 0;
   loading = {};
-  favorites = [];
   firstStart = false;
 
   clientWidth;
   width;
 
   dispatch;
+
+  _favorites;
+
+  get favorites() {
+    if (!this._favorites) {
+      this._favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    }
+    return this._favorites;
+  }
+
+  set favorites(v) {
+    this._favorites = v || [];
+    localStorage.setItem('favorites', JSON.stringify(this._favorites));
+  }
 
   constructor(dispatch) {
     this.dispatch = dispatch;
@@ -120,9 +134,24 @@ export class State {
     }
   };
 
+  onError = (callback, message = 'Ошибка загрузки данных') => {
+    if (!this.tickerNames) this.tickerNames = [];
+    this.apiTimeout = true;
+    if (message) {
+      notification.error({message})
+    }
+    if (callback) {
+      setTimeout(() => {
+        this.apiTimeout = false;
+        callback();
+      }, 1000 * 60 * apiTimeout);
+    }
+    this.dispatch(this);
+  };
+
   getSpot = () => {
     if (this.apiTimeout) {
-      setTimeout(this.getSpot, 1000 * 60 * apiTimeout + 100);
+      this.onError(this.getSpot, '');
     } else {
       this.spot = {};
       getSpotExchangeInfo()
@@ -138,19 +167,15 @@ export class State {
             }
           }
         })
-        .catch((e) => {
-          this.apiTimeout = true;
-          this.getSpot();
-          setTimeout(() => {
-            this.apiTimeout = false;
-          }, 1000 * 60 * apiTimeout);
+        .catch(() => {
+          this.onError(this.getSpot);
         });
     }
   }
 
   getFutures = () => {
     if (this.apiTimeout) {
-      setTimeout(this.getFutures, 1000 * 60 * apiTimeout + 100);
+      this.onError(this.getFutures, '');
     } else {
       getFuturesExchangeInfo()
         .then((data) => {
@@ -205,26 +230,27 @@ export class State {
                   .sort();
               }
               this.loading = {};
-              this.tickerNames.forEach((name) => {
-                this.loading[name] = true;
-                setTimeout(() => {
-                  this.tickers[name] = new Ticker(name, this);
-                  delete this.loading[name];
-                  if (!Object.keys(this.loading).length) {
-                    this.dispatch?.(this);
-                  }
+              if (this.tickerNames.length) {
+                this.tickerNames.forEach((name) => {
+                  this.loading[name] = true;
+                  setTimeout(() => {
+                    this.tickers[name] = new Ticker(name, this);
+                    delete this.loading[name];
+                    if (!Object.keys(this.loading).length) {
+                      this.dispatch?.(this);
+                    }
+                  });
                 });
-              });
-              // this.dispatch?.(this);
+              } else {
+                this.dispatch?.(this);
+              }
+            } else {
+              this.dispatch?.(this);
             }
           }
         })
-        .catch((e) => {
-          this.apiTimeout = true;
-          this.getFutures();
-          setTimeout(() => {
-            this.apiTimeout = false;
-          }, 1000 * 60 * apiTimeout);
+        .catch(() => {
+          this.onError(this.getFutures);
         });
     }
   }
@@ -251,18 +277,6 @@ export class State {
         }, 0);
         return isActive;
       }).sort();
-  };
-
-  remove = (ticker) => {
-    this.priceNearLevel = this.priceNearLevel.filter((t) => t.name !== ticker.name);
-    this.banned[ticker.name] = ticker;
-    this.dispatch?.(this);
-    if (this.config?.notificationTimeout) {
-      setTimeout(() => {
-        delete this.banned[ticker.name];
-        this.dispatch?.(this);
-      }, this.config.notificationTimeout * 60 * 1000);
-    }
   };
 
   setNotification = () => {

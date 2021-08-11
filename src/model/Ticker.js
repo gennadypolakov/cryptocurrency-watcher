@@ -1,7 +1,7 @@
 import {OrderBook} from './OrderBook';
 import {createChart as createChartFn} from 'lightweight-charts';
 import {getSymbolChartData} from '../api';
-import {apiTimeout, chartLimit, d1, h1, m5} from '../config';
+import {chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
@@ -26,6 +26,7 @@ export class Ticker {
   chart;
   chartData = {};
   chartElement;
+  chartContainer;
   config;
   levels = {};
   highs;
@@ -142,10 +143,8 @@ export class Ticker {
   };
 
   getChartData = (interval) => {
-    if (this.state.apiTimeout) {
-      setTimeout(() => {
-        this.getChartData(interval);
-      }, 1000 * 60 * apiTimeout + 100);
+    if (this.state?.apiTimeout) {
+      this.state.onError(() => this.getChartData(interval), '');
     } else {
       getSymbolChartData(this.name, interval, chartLimit[interval])
         .then((data) => {
@@ -174,12 +173,8 @@ export class Ticker {
             this.updateLevels(true);
           }
         })
-        .catch((e) => {
-          this.state.apiTimeout = true;
-          this.getChartData(interval);
-          setTimeout(() => {
-            this.state.apiTimeout = false;
-          }, 1000 * 60 * apiTimeout);
+        .catch(() => {
+          this.state?.onError(() => this.getChartData(interval), '');
         });
     }
   };
