@@ -3,6 +3,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import './App.css';
 import {Chart, CommonSettings, Favorites} from './components';
 import {State} from './model/State';
+import {Loader} from './components/Loader/Loader';
 
 export const App = () => {
   const ref = useRef();
@@ -40,6 +41,7 @@ export const App = () => {
     ref={ref}
   >
     {state?.tickerNames?.map((ticker) => <Chart ticker={state.tickers[ticker]} key={ticker} />)}
+    <Loader loading={!state?.tickerNames} />
     {state?.config ? <CommonSettings state={state} /> : null}
     <Favorites state={state} />
   </div>;
