@@ -3,9 +3,10 @@ import {CloseOutlined, ExclamationCircleOutlined, SettingOutlined} from '@ant-de
 import {Badge, Card, Modal} from 'antd';
 import {Tabs} from 'antd';
 
-import s from './CommonSettings.module.scss';
 import {Settings} from '../Settings/Settings';
 import {Tickers} from '../Tickers/Tickers';
+import s from './CommonSettings.module.scss';
+import chartStyles from '../Chart/Chart.module.scss';
 
 const {TabPane} = Tabs;
 
@@ -23,7 +24,14 @@ export const CommonSettings = (props) => {
   }
 
   const toChart = (ticker) => () => {
-    window.location.href = `/#${ticker}`;
+    const chart = state?.tickers?.[ticker]?.chartContainer;
+    if (chart) {
+      chart.scrollIntoView({behavior: 'smooth'});
+      chart.classList.add(chartStyles.blinkChartBorder);
+      setTimeout(() => {
+        chart.classList.remove(chartStyles.blinkChartBorder);
+      }, 3000);
+    }
     setEventsVisible(false);
     if (state.events?.[ticker]) {
       if (state.events[ticker].level) {

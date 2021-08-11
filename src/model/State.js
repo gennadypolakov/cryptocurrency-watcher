@@ -1,7 +1,6 @@
 import {getFuturesExchangeInfo, getSpotExchangeInfo} from '../api';
 import {Subject} from 'rxjs';
 import {set} from 'lodash';
-// import Dexie from 'dexie';
 
 import {Ticker} from './Ticker';
 import {Settings} from './Settings';
@@ -47,22 +46,6 @@ export class State {
 
   constructor(dispatch) {
     this.dispatch = dispatch;
-    // setInterval(() => {
-    //   console.log('priceSubscribers', this.priceSubscribers);
-    //   console.log('orderSubscribers', this.orderSubscribers);
-    //   console.log('chartSubscribers', this.chartSubscribers);
-    // }, 2000);
-
-    // this.db = new Dexie('CryptoMonitor');
-    // this.db.version(1).stores({
-    //   orders: '++id,name,side,price,volume,line'
-    // });
-    // this.db.orders.clear();
-    // setTimeout(() => {
-    //   setInterval(() => {
-    //     this.db.orders.count().then((c) => console.log('count', c));
-    //   }, 2000)
-    // }, 60000);
   }
 
   getWidth = () => {

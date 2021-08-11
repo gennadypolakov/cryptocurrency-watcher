@@ -1,7 +1,6 @@
 import {getSymbolOrderBook} from '../api';
 import {Order} from './Order';
 import {ASK, BID} from '../constants';
-import {apiTimeout} from '../config';
 
 export class OrderBook {
 

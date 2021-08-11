@@ -3,6 +3,7 @@ import {CloseOutlined} from '@ant-design/icons';
 import {useEffect, useRef} from 'react';
 
 import s from './Favorites.module.scss';
+import chartStyles from '../Chart/Chart.module.scss';
 
 export const Favorites = (props) => {
   const {state} = props;
@@ -19,13 +20,12 @@ export const Favorites = (props) => {
   }, [ref, state, state?.favorites?.length]);
 
   const goTo = (name) => () => {
-    // window.location.href = `/#${name}`;
     const chart = state?.tickers?.[name]?.chartContainer;
     if (chart) {
       chart.scrollIntoView({behavior: 'smooth'});
-      chart.classList.add(s.blinkChartBorder);
+      chart.classList.add(chartStyles.blinkChartBorder);
       setTimeout(() => {
-        chart.classList.remove(s.blinkChartBorder);
+        chart.classList.remove(chartStyles.blinkChartBorder);
       }, 3000);
     }
   };

@@ -162,7 +162,7 @@ export class Settings {
     if (config) {
       const {action, ...rest} = config;
       const updateChart = this.columnCount !== config.columnCount;
-      if (updateChart) {
+      if (!this.ticker && updateChart) {
         this.state.width = (this.state.clientWidth - 12 * config.columnCount) / config.columnCount;
       }
       this.map = rest;

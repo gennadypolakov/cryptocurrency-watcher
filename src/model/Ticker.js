@@ -7,7 +7,6 @@ import {Settings} from './Settings';
 import {Subject} from 'rxjs';
 import {barPrices, D1, HIGH, LOW, M5} from '../constants';
 import {Level} from './Level';
-// import {init, dispose} from 'klinecharts';
 
 const nextInterval = {
   [m5]: h1,
@@ -53,26 +52,6 @@ export class Ticker {
     this.config = new Settings(state, this);
     this.minLevelAge = this.config.minLevelAge;
   }
-
-  // createChartTest = (chartElement) => {
-  //   if (!this.chartElement) {
-  //     this.chartElement = chartElement;
-  //   }
-  //   if (!this.chart && this.chartElement) {
-  //     this.chart = init(this.chartElement);
-  //     this.chart.setStyleOptions({candle: {tooltip: {labels: ['T', 'O', 'C', 'H', 'L', 'V']}}});
-  //     this.chart.createTechnicalIndicator('VOL', false);
-  //   }
-  //   if (this.chart) {
-  //     if (this.chartData[m5]) {
-  //       this.setChartDataTest();
-  //     } else {
-  //       this.getChartDataTest(m5);
-  //     }
-  //   }
-  // };
-
-
 
   createChart = (chartElement) => {
     if (!this.chartElement) {
@@ -179,42 +158,6 @@ export class Ticker {
     }
   };
 
-  // getChartDataTest = (interval) => {
-  //   if (this.state.apiTimeout) {
-  //     setTimeout(() => {
-  //       this.getChartDataTest(interval);
-  //     }, 1000 * 60 * apiTimeout + 100);
-  //   } else {
-  //     getSymbolChartData(this.name, interval, chartLimit[interval])
-  //       .then((data) => {
-  //         if (data.length) {
-  //           const map = {};
-  //           const array = [];
-  //           data.forEach((bar) => {
-  //             const candle = new Bar(bar);
-  //             candle.i = array.push(candle) - 1;
-  //             map[candle.time] = candle;
-  //             this.setPrecision(candle);
-  //           });
-  //           this.chartData[interval] = {map, array};
-  //           if (interval === m5) {
-  //             const lastIndex = this.chartData[m5].array.length - 1;
-  //             this.price = this.chartData[m5].array[lastIndex].close;
-  //             this.setChartDataTest();
-  //             this.updateUI$.next(this);
-  //           }
-  //         }
-  //       })
-  //       .catch((e) => {
-  //         this.state.apiTimeout = true;
-  //         this.getChartDataTest(interval);
-  //         setTimeout(() => {
-  //           this.state.apiTimeout = false;
-  //         }, 1000 * 60 * apiTimeout);
-  //       });
-  //   }
-  // };
-
   openStream = () => {
     if (!this.stream) {
       try {
@@ -258,30 +201,6 @@ export class Ticker {
     setTimeout(this.openStream, 5000);
   };
 
-  // onChart = (update) => {
-  //   if (update?.k) {
-  //     const bar = new Bar(update.k);
-  //     this.price = bar.close;
-  //     const {array, map} = this.chartData?.[M5] || {};
-  //     if (!map[bar.time]) {
-  //       array.push(bar);
-  //       this.setAverageVolume();
-  //     }
-  //     map[bar.time] = bar;
-  //     if (this.chart) {
-  //       const {time, open, high, low, close, volume} = bar;
-  //       this.chart.updateData({
-  //         timestamp: time,
-  //         open,
-  //         high,
-  //         low,
-  //         close,
-  //         volume
-  //       });
-  //     }
-  //   }
-  // };
-
   onChart = (update) => {
     if (update?.k?.t) {
       const time = update.k.t;
@@ -307,9 +226,6 @@ export class Ticker {
             close,
           });
           this.price$?.next({high, low, time});
-          // if (this.state.favorites.some((name) => this.name === name)) {
-          //   console.log(this.name, array, bar, this.averageVolume);
-          // }
         }
       }
     }
@@ -369,20 +285,6 @@ export class Ticker {
       });
     }
   };
-
-  // setChartDataTest = () => {
-  //   if (this.chart && this.chartData?.[m5]?.array) {
-  //     this.chart.applyNewData(this.chartData[m5].array.map((bar) => ({
-  //       timestamp: bar.time,
-  //       open: bar.open,
-  //       high: bar.high,
-  //       low: bar.low,
-  //       close: bar.close,
-  //       volume: bar.volume
-  //     })));
-  //     this.openStream();
-  //   }
-  // };
 
   updateLevels = (force = false) => {
     if (

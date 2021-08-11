@@ -9,7 +9,6 @@
     "@testing-library/user-event": "^12.1.10",
     "antd": "^4.16.9",
     "axios": "^0.21.1",
-    "klinecharts": "^7.5.0",
     "lightweight-charts": "^3.4.0",
     "lodash": "^4.17.21",
     "react": "^17.0.2",

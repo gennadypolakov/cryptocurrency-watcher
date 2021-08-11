@@ -5,7 +5,6 @@ import {isEqual} from 'lodash';
 import s from './Settings.module.scss';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {defaultConfig} from '../../model/Settings';
-import {columnCount} from '../../config';
 
 export const Settings = (props) => {
   const {state, name} = props;
