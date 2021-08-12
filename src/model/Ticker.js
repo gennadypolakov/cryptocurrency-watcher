@@ -1,6 +1,6 @@
 import {OrderBook} from './OrderBook';
 import {createChart as createChartFn} from 'lightweight-charts';
-import {getSymbolChartData} from '../api';
+import {getSymbolChartData, getSymbolChartDataByRange} from '../api';
 import {chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
@@ -99,6 +99,7 @@ export class Ticker {
       this.orderBook?.remove();
       this.price$.complete();
       this.updateUI$.complete();
+      this.chart?.timeScale().unsubscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);
       if (updateConfig) {
         this.state?.config?.save?.();
         this.state?.updateTickers?.();
@@ -262,13 +263,46 @@ export class Ticker {
       })));
       this.setChartOptions();
       this.openStream();
+      this.chart.timeScale().subscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);
+    }
+  };
+
+  onVisibleTimeRangeChanged = (range) => {
+    if (range?.from && this.chartData?.[M5]?.map) {
+      const prevBarTime = range.from * 1000 - 5 * 60 * 1000;
+      const prevBar = this.chartData[M5].map[prevBarTime];
+      if (!prevBar) {
+        this.chartData[M5].map[prevBarTime] = 1; // чтоб на время запроса не генерировались новые запросы
+        getSymbolChartDataByRange(this.name, M5, range.from * 1000 - 500 * 5 * 60 * 1000, range.from * 1000)
+          .then((data) => {
+            delete this.chartData[M5].map[prevBarTime];
+            if (data && this.series && this.chartData?.[M5]?.map) {
+              data.forEach((d) => {
+                const bar = new Bar(d);
+                this.chartData[M5].map[bar.time] = bar
+              });
+              this.chartData[M5].array = Object.keys(this.chartData[M5].map)
+                .map((time) => Number(time))
+                .sort((a, b) => a - b)
+                .map((time) => this.chartData[M5].map[time]);
+              this.series.setData(this.chartData[m5].array.map((bar) => ({
+                time: bar.time / 1000,
+                open: bar.open,
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+              })));
+            }
+          })
+          .catch(() => {});
+      }
     }
   };
 
   setChartOptions = () => {
     if (this.chart && this.series) {
       this.chart.timeScale().setVisibleRange({
-        from: (Date.now() - 60 * 60 * 12 * 1000) / 1000,
+        from: (Date.now() - 60 * 60 * 24 * 1000) / 1000,
         to: Date.now() / 1000,
       });
       this.chart.applyOptions({
