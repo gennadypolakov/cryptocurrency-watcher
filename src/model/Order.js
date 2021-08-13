@@ -1,6 +1,7 @@
 import {priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
 import {ASK, ORDER_COLOR} from '../constants';
+import {getShorted} from './Ticker';
 
 export class Order {
 
@@ -115,7 +116,7 @@ export class Order {
   updateLine = () => {
     if (this.line && this.side && this.volume) {
       this.line?.applyOptions({
-        title: this.volume
+        title: getShorted(this.volume)
       });
     }
   };
@@ -137,7 +138,7 @@ export class Order {
           axisLabelVisible: true,
           price: this.price,
           lineWidth: 1,
-          title: this.volume
+          title: getShorted(this.volume)
         });
         this.orderBook.lines[this.side][this.price] = this;
       }

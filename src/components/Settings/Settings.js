@@ -5,17 +5,19 @@ import {isEqual} from 'lodash';
 import s from './Settings.module.scss';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {defaultConfig} from '../../model/Settings';
+import {getShorted} from '../../model/Ticker';
 
 export const Settings = (props) => {
   const {state, name} = props;
   const [config, setConfig] = useState();
   const [disabled, setDisabled] = useState(true);
   const [resetDisabled, setResetDisabled] = useState(false);
+  const [minOrder, setMinOrder] = useState('');
   const formRef = useRef();
 
   const tickerConfig = name ? state.tickers[name].config.map : null;
   const averageVolume = name ? Math.round(state.tickers[name].averageVolume) : null;
-  const averageVolumeTime = tickerConfig?.last5mCount * 5;
+  const averageVolumeAsString = name ? state.tickers[name].averageVolumeAsString : null;
   const minOrderVolume = tickerConfig ? Math.round(averageVolume * tickerConfig?.minOrderPercentage) : null;
   const clientWidth = state?.clientWidth;
 
@@ -30,6 +32,17 @@ export const Settings = (props) => {
     }
     return counts;
   }, [clientWidth]);
+
+  useEffect(() => {
+    let minOrder = '';
+    if (minOrderVolume) {
+      minOrder = getShorted(minOrderVolume);
+      if (name && state.tickers[name]?.closePrice) {
+        minOrder += ` ($${getShorted(minOrderVolume * state.tickers[name].closePrice)})`;
+      }
+      setMinOrder(minOrder);
+    }
+  }, [minOrderVolume, name, state.tickers]);
 
   useEffect(() => {
     if (name) {
@@ -69,6 +82,20 @@ export const Settings = (props) => {
     state?.dispatch?.(state);
   };
 
+  const onValuesChange = ({minOrderPercentage}) => {
+    if (minOrderPercentage && averageVolume) {
+      const minOrderVolume = averageVolume * Number(minOrderPercentage);
+      let minOrder = '';
+      if (minOrderVolume) {
+        minOrder = getShorted(minOrderVolume);
+        if (name && state.tickers[name]?.closePrice) {
+          minOrder += ` ($${getShorted(minOrderVolume * state.tickers[name].closePrice)})`;
+        }
+        setMinOrder(minOrder);
+      }
+    }
+  };
+
   const reset = () => {
     let newConfig;
     if (name) {
@@ -88,14 +115,17 @@ export const Settings = (props) => {
   return config ? (
     <div className={s.settings}>
       {averageVolume ? <div>
-        <div>Средний объем {averageVolume} за {averageVolumeTime} мин</div>
-        <div>Минимальный размер ордера {minOrderVolume}</div>
+        <div>Средний объем {averageVolumeAsString}</div>
+        <div>Минимальный ордер {minOrder}</div>
       </div> : null}
       <Form
         ref={formRef}
         initialValues={config}
         onFinish={onFinish}
-        onFieldsChange={() => setDisabled(false)}
+        onFieldsChange={(e) => {
+          setDisabled(false)
+        }}
+        onValuesChange={onValuesChange}
       >
         {!name && columnCounts.length > 1
           ? <Form.Item

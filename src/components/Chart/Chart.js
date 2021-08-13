@@ -76,7 +76,7 @@ export const Chart = (props) => {
         style={{width, height}}
       >
         <div className={s.header}>
-          <span>{symbol} <small>5m</small></span>
+          <span>{symbol} <small>5m, средний объем {ticker?.averageVolumeAsString}</small></span>
           <div className={s.controls}>
             {favorite
               ? <StarFilled

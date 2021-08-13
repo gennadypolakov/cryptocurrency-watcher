@@ -59,23 +59,15 @@ export class Level {
         });
       }
     } else if (priceDelta < 0) {
-      // if (!this.ticker?.levels?.[price]) {
-      //   const {ticker, side} = this;
-      //   new Level({price, side, ticker});
-      // }
-      // if (this.interval === M5) {
-      //   this.destroy();
-      // } else {
-        if (this.blinkIntervalId) clearInterval(this.blinkIntervalId);
-        delete this.blinkIntervalId;
-        this.line?.applyOptions({
-          color: CROSSED_LEVEL_COLOR,
-          lineWidth: lineWidths[this.interval] || 1,
-          lineStyle: LineStyle.Dashed
-        });
-        this.isActual = false;
-        this.priceSubscription?.unsubscribe();
-      // }
+      if (this.blinkIntervalId) clearInterval(this.blinkIntervalId);
+      delete this.blinkIntervalId;
+      this.line?.applyOptions({
+        color: CROSSED_LEVEL_COLOR,
+        lineWidth: lineWidths[this.interval] || 1,
+        lineStyle: LineStyle.Dashed
+      });
+      this.isActual = false;
+      this.priceSubscription?.unsubscribe();
     }
   };
 

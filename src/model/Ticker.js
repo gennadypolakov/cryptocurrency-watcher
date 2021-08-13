@@ -5,12 +5,12 @@ import {chartLimit, d1, h1, m5} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
-import {barPrices, D1, HIGH, LOW, M5} from '../constants';
+import {barPrices, D1, H1, HIGH, LOW, M5} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
   [m5]: h1,
-  [h1]: d1,
+  [h1]: d1
 };
 
 const methods = {
@@ -19,13 +19,35 @@ const methods = {
   onBestPrice: '@bookTicker',
 };
 
+export const getShorted = (v) => {
+  let shorted;
+  if (v > 1000000) {
+    if (v / 1000000 < 10) {
+      shorted = Math.round(v / 1000000 * 10) / 10 + 'M';
+    } else {
+      shorted = Math.round(v / 1000000) + 'M';
+    }
+  } else if (v > 1000) {
+    if (v / 1000 < 10) {
+      shorted = Math.round(v / 1000 * 10) / 10 + 'K';
+    } else {
+      shorted = Math.round(v / 1000) + 'K';
+    }
+  } else {
+    shorted = Math.round(v);
+  }
+  return shorted;
+};
+
 export class Ticker {
 
   averageVolume;
+  averageVolumeAsString = '';
   chart;
   chartData = {};
   chartElement;
   chartContainer;
+  closePrice = 0;
   config;
   levels = {};
   highs;
@@ -227,6 +249,11 @@ export class Ticker {
             close,
           });
           this.price$?.next({high, low, time});
+          if (!this.closePrice) {
+            setTimeout(() => this.state?.dispatch(this.state));
+          }
+          this.closePrice = close;
+          this.setAverageVolumeAsString();
         }
       }
     }
@@ -252,6 +279,17 @@ export class Ticker {
     }
   };
 
+  setAverageVolumeAsString = () => {
+    let averageVolumeAsString = '';
+    if (this.averageVolume) {
+      averageVolumeAsString = getShorted(this.averageVolume);
+      if (this.closePrice) {
+        averageVolumeAsString += ` ($${getShorted(this.averageVolume * this.closePrice)})`;
+      }
+      this.averageVolumeAsString = averageVolumeAsString;
+    }
+  };
+
   setChartData = () => {
     if (this.series && this.chartData?.[m5]?.array) {
       this.series.setData(this.chartData[m5].array.map((bar) => ({
@@ -268,23 +306,26 @@ export class Ticker {
   };
 
   onVisibleTimeRangeChanged = (range) => {
-    if (range?.from && this.chartData?.[M5]?.map) {
+    const barMap = this.chartData?.[M5]?.map;
+    if (range?.from && barMap) {
       const prevBarTime = range.from * 1000 - 5 * 60 * 1000;
-      const prevBar = this.chartData[M5].map[prevBarTime];
+      const prevBar = barMap[prevBarTime];
       if (!prevBar) {
-        this.chartData[M5].map[prevBarTime] = 1; // чтоб на время запроса не генерировались новые запросы
+        barMap[prevBarTime] = 1; // чтоб на время запроса не генерировались новые запросы
         getSymbolChartDataByRange(this.name, M5, range.from * 1000 - 500 * 5 * 60 * 1000, range.from * 1000)
           .then((data) => {
-            delete this.chartData[M5].map[prevBarTime];
-            if (data && this.series && this.chartData?.[M5]?.map) {
+            delete barMap[prevBarTime];
+            if (data && this.series) {
               data.forEach((d) => {
                 const bar = new Bar(d);
-                this.chartData[M5].map[bar.time] = bar
+                barMap[bar.time] = bar
               });
-              this.chartData[M5].array = Object.keys(this.chartData[M5].map)
-                .map((time) => Number(time))
-                .sort((a, b) => a - b)
-                .map((time) => this.chartData[M5].map[time]);
+              this.chartData[M5].array = Object.keys(barMap)
+                .sort((a, b) => barMap[a].time - barMap[b].time)
+                .map((time, i) => {
+                  barMap[time].i = i;
+                  return barMap[time];
+                });
               this.series.setData(this.chartData[m5].array.map((bar) => ({
                 time: bar.time / 1000,
                 open: bar.open,
@@ -337,49 +378,75 @@ export class Ticker {
   };
 
   setExtremes = (interval) => {
+    const timeDelta = {
+      [H1]: 60 * 60 * 1000 * 5,
+      [D1]: 60 * 60 * 1000 * 24 * 10
+    };
     const data = this.chartData?.[interval]?.array;
     const minLevelAge = interval === D1 ? 24 : (this.config?.minLevelAge || 1);
     const minLevelAgeTime = Date.now() - minLevelAge * 1000 * 60 * 60;
     const series = this.series;
     if (data?.length && series) {
-      let currentHigh = [0, 0];
-      let currentLow = [0, 0];
-      let highCreated = false;
-      let lowCreated = false;
+      const current = {high: {price: null, time: null}, low: {price: null, time: null}};
+      const prev = {high: {price: null, time: null}, low: {price: null, time: null}};
+      const highs = [];
+      const lows = [];
+      let highAdded = false;
+      let lowAdded = false;
       for (let i = data.length - 1; i >= 0; i--) {
         const {high, low, time} = data[i];
         if (i === data.length - 1) {
-          currentHigh = [high, time];
-          currentLow = [low, time];
+          current.high = {price: high, time};
+          current.low = {price: low, time};
         } else {
-          if (high > currentHigh[0]) {
-            currentHigh = [high, time];
-            highCreated = false;
-          } else if (high < currentHigh[0] && !highCreated && currentHigh[1] < minLevelAgeTime) {
-            new Level({
-              interval,
-              price: currentHigh[0],
-              side: HIGH,
-              ticker: this,
-              time: currentHigh[1],
-            });
-            highCreated = true;
+          if (high > current.high.price) {
+            current.high = {price: high, time};
+            highAdded = false;
+          } else if (
+            high < current.high.price && !highAdded &&
+            current.high.time < minLevelAgeTime
+          ) {
+            if (prev.high.time && prev.high.time - timeDelta[interval] < current.high.time) {
+              highs.pop();
+            }
+            prev.high = {...current.high};
+            highs.push({...current.high});
+            highAdded = true;
           }
-          if (low < currentLow[0]) {
-            currentLow = [low, time];
-            lowCreated = false;
-          } else if (low > currentLow[0] && !lowCreated && currentLow[1] < minLevelAgeTime) {
-            new Level({
-              interval,
-              price: currentLow[0],
-              side: LOW,
-              ticker: this,
-              time: currentLow[1],
-            });
-            lowCreated = true;
+          if (low < current.low.price) {
+            current.low = {price: low, time};
+            lowAdded = false;
+          } else if (
+            low > current.low.price && !lowAdded &&
+            current.low.time < minLevelAgeTime
+          ) {
+            if (prev.low.time && prev.low.time - timeDelta[interval] < current.low.time) {
+              lows.pop();
+            }
+            prev.low = {...current.low};
+            lows.push({...current.low});
+            lowAdded = true;
           }
         }
       }
+      highs.forEach((high) => {
+        new Level({
+          interval,
+          price: high.price,
+          side: HIGH,
+          ticker: this,
+          time: high.time,
+        });
+      });
+      lows.forEach((low) => {
+        new Level({
+          interval,
+          price: low.price,
+          side: LOW,
+          ticker: this,
+          time: low.time,
+        });
+      });
     }
   };
 
