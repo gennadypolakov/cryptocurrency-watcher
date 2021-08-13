@@ -24,6 +24,7 @@ export class State {
   counter = 0;
   loading = {};
   firstStart = false;
+  favoritesHeight = 0;
 
   clientWidth;
   width;

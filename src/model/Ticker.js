@@ -75,16 +75,22 @@ export class Ticker {
     this.minLevelAge = this.config.minLevelAge;
   }
 
+  getHeight = (width) => {
+    let height = width * 0.7;
+    const favoritesHeight = this.state?.favoritesHeight || 0;
+    if (height + 12 + 32 + favoritesHeight > window.innerHeight) {
+      height = window.innerHeight - 12 - 32 - favoritesHeight;
+    }
+    return height;
+  };
+
   createChart = (chartElement) => {
     if (!this.chartElement) {
       this.chartElement = chartElement;
     }
     if (!this.chart && this.chartElement) {
       const width = (this.state.width || 400) - 2;
-      let height = width * 0.7;
-      if (height + 12 + 32 > window.innerHeight) {
-        height = window.innerHeight - 12 - 32;
-      }
+      const height = this.getHeight(width);
       this.chart = createChartFn(this.chartElement, {width, height});
     }
     if (!this.series && this.chart) {
@@ -101,10 +107,7 @@ export class Ticker {
     setTimeout(() => {
       if (this.chart) {
         const width = (this.state.width || 400) - 2;
-        let height = width * 0.7;
-        if (height + 12 + 32 > window.innerHeight) {
-          height = window.innerHeight - 12 - 32;
-        }
+        const height = this.getHeight(width);
         this.chart.resize(width, height);
         this.setChartOptions();
         callback?.();
@@ -383,27 +386,30 @@ export class Ticker {
       [D1]: 60 * 60 * 1000 * 24 * 10
     };
     const data = this.chartData?.[interval]?.array;
-    const minLevelAge = interval === D1 ? 24 : (this.config?.minLevelAge || 1);
+    const minLevelAge = this.config?.minLevelAge || 1;
     const minLevelAgeTime = Date.now() - minLevelAge * 1000 * 60 * 60;
     const series = this.series;
     if (data?.length && series) {
-      const current = {high: {price: null, time: null}, low: {price: null, time: null}};
+      const current = {high: {price: null, time: null, i: null}, low: {price: null, time: null, i: null}};
       const prev = {high: {price: null, time: null}, low: {price: null, time: null}};
       const highs = [];
       const lows = [];
       let highAdded = false;
       let lowAdded = false;
-      for (let i = data.length - 1; i >= 0; i--) {
+      const lastIndex = data.length - 1;
+      for (let i = lastIndex; i >= 0; i--) {
         const {high, low, time} = data[i];
-        if (i === data.length - 1) {
-          current.high = {price: high, time};
-          current.low = {price: low, time};
+        if (i === lastIndex) {
+          current.high = {price: high, time, i};
+          current.low = {price: low, time, i};
         } else {
           if (high > current.high.price) {
-            current.high = {price: high, time};
+            current.high = {price: high, time, i};
             highAdded = false;
           } else if (
-            high < current.high.price && !highAdded &&
+            !highAdded &&
+            current.high.i !== lastIndex &&
+            high < current.high.price &&
             current.high.time < minLevelAgeTime
           ) {
             if (prev.high.time && prev.high.time - timeDelta[interval] < current.high.time) {
@@ -414,10 +420,12 @@ export class Ticker {
             highAdded = true;
           }
           if (low < current.low.price) {
-            current.low = {price: low, time};
+            current.low = {price: low, time, i};
             lowAdded = false;
           } else if (
-            low > current.low.price && !lowAdded &&
+            !lowAdded &&
+            current.low.i !== lastIndex &&
+            low > current.low.price &&
             current.low.time < minLevelAgeTime
           ) {
             if (prev.low.time && prev.low.time - timeDelta[interval] < current.low.time) {

@@ -16,14 +16,14 @@ export const Chart = (props) => {
   const [chart, setChart] = useState(false);
   const {width, height} = useMemo(() => {
     let width = (state?.width || 400);
-    let height = (width - 2) * 0.7 + 32;
+    let height = (width - 2) * 0.7 + 32 - state?.favoritesHeight;
     width = width + 'px';
     if (height > window.innerHeight) {
-      height = window.innerHeight - 12;
+      height = window.innerHeight - 12 - state?.favoritesHeight;
     }
     height = height + 'px';
     return {width, height};
-  }, [state?.width]);
+  }, [state?.favoritesHeight, state?.width]);
 
   const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
 
