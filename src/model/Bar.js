@@ -7,6 +7,7 @@ export class Bar {
   low;
   close;
   volume;
+  takerVolume;
   time;
 
   constructor(data, interval) {
@@ -25,6 +26,7 @@ export class Bar {
     this.low = Number(data[3]);
     this.close = Number(data[4]);
     this.volume = Number(data[5]);
+    this.takerVolume = Number(data[9]);
   }
 
   update(data) {
@@ -34,6 +36,7 @@ export class Bar {
     this.low = Number(data.l);
     this.close = Number(data.c);
     this.volume = Number(data.v);
+    this.takerVolume = Number(data.V);
   }
 
 }

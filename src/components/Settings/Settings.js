@@ -141,7 +141,7 @@ export const Settings = (props) => {
           <Input
             addonBefore="Расстояние до уровня или ордера"
             suffix={
-              <Tooltip title="Минимальное расстояние от текущей цены до ближайшего часового или дневного уровня или лимитного ордера в долях от единицы, чтоб сработало уведомление">
+              <Tooltip title="Минимальное расстояние от текущей цены до ближайшего часового или дневного уровня или лимитного ордера в долях единицы от цены, чтоб сработало уведомление">
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -152,6 +152,26 @@ export const Settings = (props) => {
             addonBefore="Возраст уровня"
             suffix={
               <Tooltip title="Не уведомлять о приближении цены к уровням младше указанного возраста в часах (возможно дробное значение через точку)">
+                <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+              </Tooltip>
+            }
+          />
+        </Form.Item>
+        <Form.Item name="hourlyDelta">
+          <Input
+            addonBefore="Расстояние между часовыми уровнями"
+            suffix={
+              <Tooltip title="Минимальное количество интервалов между двумя уровнями">
+                <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+              </Tooltip>
+            }
+          />
+        </Form.Item>
+        <Form.Item name="dailyDelta">
+          <Input
+            addonBefore="Расстояние между дневными уровнями"
+            suffix={
+              <Tooltip title="Минимальное количество интервалов между двумя уровнями">
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -181,7 +201,17 @@ export const Settings = (props) => {
           <Input
             addonBefore="Количество 5-минуток для среднего объема"
             suffix={
-              <Tooltip title="Сколько последних 5-минуток использовать для вычисления среднего объема">
+              <Tooltip title="Сколько последних 5-минуток использовать для вычисления среднего объема для сравнения с объемом лимитного ордера">
+                <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+              </Tooltip>
+            }
+          />
+        </Form.Item>
+        <Form.Item name="averageVolumeMultiplier">
+          <Input
+            addonBefore="Коэффициент среднего объема"
+            suffix={
+              <Tooltip title="Используется для уведомлений о повышенных объемах. Объем текущего пятиминутного интервала сравнивается со средним объемом умноженным на данный коэффициент.">
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -191,7 +221,7 @@ export const Settings = (props) => {
           <Input
             addonBefore="Таймаут уведомлений в минутах"
             suffix={
-              <Tooltip title="Время в минутах, в течение которого не уведомлять о выключенной монете">
+              <Tooltip title="Время в минутах, в течение которого не уведомлять о монете">
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }

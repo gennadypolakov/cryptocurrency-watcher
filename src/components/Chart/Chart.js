@@ -1,6 +1,6 @@
 import s from './Chart.module.scss';
 import {useEffect, useMemo, useRef, useState} from 'react';
-import {Modal} from 'antd';
+import {Modal, Tooltip} from 'antd';
 import {Settings} from '../Settings/Settings';
 import {CloseOutlined, PoweroffOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
 import {Loader} from '../Loader/Loader';
@@ -16,16 +16,19 @@ export const Chart = (props) => {
   const [chart, setChart] = useState(false);
   const {width, height} = useMemo(() => {
     let width = (state?.width || 400);
-    let height = (width - 2) * 0.7 + 32 - state?.favoritesHeight;
-    width = width + 'px';
-    if (height > window.innerHeight) {
+    let height = (width - 2) * 0.7 + 32;
+    width += 'px';
+    const favoritesHeight = state?.favoritesHeight || 0;
+    if (height - favoritesHeight > window.innerHeight) {
       height = window.innerHeight - 12 - state?.favoritesHeight;
     }
-    height = height + 'px';
+    height += 'px';
     return {width, height};
   }, [state?.favoritesHeight, state?.width]);
 
   const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
+  const last5mCount = ticker?.config?.last5mCount;
+  const {average, highVolume} = ticker?.getVolumes();
 
   useEffect(() => {
     if (ticker) {
@@ -76,7 +79,18 @@ export const Chart = (props) => {
         style={{width, height}}
       >
         <div className={s.header}>
-          <span>{symbol} <small>5m, средний объем {ticker?.averageVolumeAsString}</small></span>
+          <div className={s.info}>
+            <span title="5м график" className={s.title}>{symbol}</span>
+            {ticker?.averageVolumeAsString ? <Tooltip title={`Средний объем за последние (${last5mCount}) пятиминутные периоды`}>
+              <span>{ticker?.averageVolumeAsString}</span>
+            </Tooltip> : null}
+            {average ? <Tooltip title="Средний объем за все загруженные пятиминутные периоды">
+              <span>{average}</span>
+            </Tooltip> : null}
+            {highVolume ? <Tooltip title="Текущий повышенный объем">
+              <span className={s.highVolume}>{highVolume}</span>
+            </Tooltip> : null}
+          </div>
           <div className={s.controls}>
             {favorite
               ? <StarFilled

@@ -1,6 +1,7 @@
 import {
+  averageVolumeMultiplier,
   checkedTimout,
-  columnCount,
+  columnCount, dailyDelta, hourlyDelta,
   last5mCount,
   minLevelAge,
   minOrderPercentage,
@@ -8,13 +9,16 @@ import {
   orderTimeout,
   priceDistance,
   removeOrderPercentage,
-  removeTimeout
+  removeTimeout,
 } from '../config';
 import {Subject} from 'rxjs';
 
 export const defaultConfig = {
+  averageVolumeMultiplier,
   checkedTimout,
   columnCount,
+  dailyDelta,
+  hourlyDelta,
   last5mCount,
   minLevelAge,
   minOrderPercentage,
@@ -35,6 +39,13 @@ export class Settings {
   tickers; // {name: string, active: boolean}
 
   config$;
+
+  get averageVolumeMultiplier() {
+    return this.map.averageVolumeMultiplier;
+  };
+  set averageVolumeMultiplier(v){
+    this.map.averageVolumeMultiplier = v;
+  };
 
   get notificationTimeout() {
     return this.map.notificationTimeout;
@@ -106,6 +117,20 @@ export class Settings {
     this.map.removeTimeout = v;
   };
 
+  get dailyDelta() {
+    return this.map.dailyDelta;
+  };
+  set dailyDelta(v){
+    this.map.dailyDelta = v;
+  };
+
+  get hourlyDelta() {
+    return this.map.hourlyDelta;
+  };
+  set hourlyDelta(v){
+    this.map.hourlyDelta = v;
+  };
+
 
   constructor(state, ticker) {
     this.state = state;
@@ -144,6 +169,18 @@ export class Settings {
       this.map = JSON.parse(configJson);
       if (!this.columnCount) {
         this.columnCount = columnCount;
+        this.save();
+      }
+      if (!this.averageVolumeMultiplier) {
+        this.averageVolumeMultiplier = averageVolumeMultiplier;
+        this.save();
+      }
+      if (!this.hourlyDelta) {
+        this.hourlyDelta = hourlyDelta;
+        this.save();
+      }
+      if (!this.dailyDelta) {
+        this.dailyDelta = dailyDelta;
         this.save();
       }
     } else if (ticker) {

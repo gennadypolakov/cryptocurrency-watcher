@@ -7,6 +7,7 @@ import {Settings} from '../Settings/Settings';
 import {Tickers} from '../Tickers/Tickers';
 import s from './CommonSettings.module.scss';
 import chartStyles from '../Chart/Chart.module.scss';
+import {getShorted} from '../../model/Ticker';
 
 const {TabPane} = Tabs;
 
@@ -44,6 +45,9 @@ export const CommonSettings = (props) => {
           state.events[ticker].order[p].viewed = true;
         });
       }
+      if (state.events[ticker].volume) {
+        state.events[ticker].volume.volumeVieved = true;
+      }
       delete state.events[ticker];
       state.dispatch?.(state);
     }
@@ -74,6 +78,14 @@ export const CommonSettings = (props) => {
         .map((price) => orderMap[price])
         .filter((o) => o.volume);
       return orders.map((order) => <div key={`o${order.price}`}>Лимитный ордер: цена {order.price}, объем {order.volume}</div>)
+    }
+    return null;
+  };
+
+  const getVolume = (ticker) => {
+    if (state.events[ticker]?.volume?.highVolume) {
+      const volume = state.events[ticker]?.volume?.highVolume;
+      return <div>Повышенный объем: {getShorted(volume)}</div>;
     }
     return null;
   };
@@ -117,10 +129,11 @@ export const CommonSettings = (props) => {
       {tickers.map((ticker) => {
         const levels = getLevels(ticker);
         const orders = getOrders(ticker);
-        if (!levels && !orders) {
+        const volume = getVolume(ticker);
+        if (!levels && !orders && !volume) {
           delete state.events[ticker];
         }
-        return levels || orders ? (
+        return levels || orders || volume? (
           <Card
             className={s.card}
             extra={<div className={s.controls}>
@@ -133,6 +146,7 @@ export const CommonSettings = (props) => {
           >
             {levels}
             {orders}
+            {volume}
           </Card>
         ) : null;
       })}

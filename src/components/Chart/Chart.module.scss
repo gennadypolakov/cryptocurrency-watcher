@@ -14,6 +14,30 @@
     justify-content: space-between;
 }
 
+.info {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+
+    & > * {
+        margin-right: 10px;
+        color: #5a668d;
+        font-size: 80%;
+
+        &:hover {
+            color: #1f2331;
+        }
+
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+
+.title {
+    font-size: 100%;
+}
+
 .controls {
     & > * {
         margin-right: 10px;
@@ -26,6 +50,10 @@
     }
 }
 
+.highVolume {
+    animation: blinkText 1s step-end infinite alternate;
+}
+
 .blinkChartBorder {
     animation: blinkChartBorder 0.5s step-end infinite alternate;
 }
@@ -34,5 +62,11 @@
     50% {
         border-color: #ff0000;
         box-shadow: 0 5px 8px 0 rgba(255, 0, 0, 0.4);
+    }
+}
+
+@keyframes blinkText {
+    50% {
+        color: #ff0000;
     }
 }

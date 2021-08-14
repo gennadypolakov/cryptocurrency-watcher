@@ -101,6 +101,12 @@ export class State {
         set(this.events, [event.ticker.name, 'order', event.price], event);
         this.dispatch?.(this);
       }
+    } else if (
+      event instanceof Ticker &&
+      !this.events[event.name]?.volume
+    ) {
+      set(this.events, [event.name, 'volume'], event);
+      this.dispatch?.(this);
     }
   }
 
@@ -109,9 +115,10 @@ export class State {
       delete this.events[name][type][price];
       const levels = this.events[name].level;
       const orders = this.events[name].order;
+      const volume = this.events[name].volume;
       const levelsCount = levels ? Object.keys(levels).length : 0;
       const ordersCount = orders ? Object.keys(orders).length : 0;
-      if (!levelsCount && !ordersCount) {
+      if (!levelsCount && !ordersCount && !volume) {
         delete this.events[name];
         this.dispatch(this);
       }

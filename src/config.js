@@ -34,3 +34,6 @@ export const removeTimeout = 1; // таймаут проверки цены ли
 export const removeOrderPercentage = 0.001; // доля от цены на которую она превысила цену ордера, неудаленного по какой-либо причине
 export const apiTimeout = 2; // таймаут запросов при бане апи в минутах
 export const columnCount = 3; // количество графиков по ширине
+export const averageVolumeMultiplier = 2; // множитель среднего объема
+export const dailyDelta = 10; // минимальное расстояние в количестве интервалов для вычисления дневных уровней
+export const hourlyDelta = 8; // минимальное расстояние в количестве интервалов для вычисления дневных уровней

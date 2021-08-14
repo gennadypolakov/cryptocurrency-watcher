@@ -1,7 +1,7 @@
 import {OrderBook} from './OrderBook';
 import {createChart as createChartFn} from 'lightweight-charts';
 import {getSymbolChartData, getSymbolChartDataByRange} from '../api';
-import {chartLimit, d1, h1, m5} from '../config';
+import {chartLimit} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
@@ -9,8 +9,8 @@ import {barPrices, D1, H1, HIGH, LOW, M5} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
-  [m5]: h1,
-  [h1]: d1
+  [M5]: H1,
+  [H1]: D1
 };
 
 const methods = {
@@ -65,6 +65,14 @@ export class Ticker {
   updateUI$ = new Subject();
   isActive = true;
   minLevelAge;
+  volume = {
+    sum: 0,
+    count: 0,
+    average: 0,
+    current: 0
+  };
+  highVolume = 0;
+  volumeViewed = false;
 
   constructor(name, state) {
     this.name = name;
@@ -95,10 +103,10 @@ export class Ticker {
     }
     if (!this.series && this.chart) {
       this.series = this.chart.addCandlestickSeries();
-      if (this.chartData[m5]) {
+      if (this.chartData[M5]) {
         this.setChartData();
       } else {
-        this.getChartData(m5);
+        this.getChartData(M5);
       }
     }
   };
@@ -157,13 +165,13 @@ export class Ticker {
             const map = {};
             const array = [];
             data.forEach((bar) => {
-              const candle = new Bar(bar);
+              const candle = new Bar(bar, interval);
               candle.i = array.push(candle) - 1;
               map[candle.time] = candle;
               this.setPrecision(candle);
             });
             this.chartData[interval] = {map, array};
-            if (interval === m5) {
+            if (interval === M5) {
               this.setChartData();
               this.setAverageVolume();
               if (!this.orderBook) {
@@ -193,6 +201,12 @@ export class Ticker {
           streamNames.push(this.name.toLowerCase() + methods[name]);
           this.method[streamName] = name;
         });
+        // if (this.name === 'WAVESUSDT') {
+        //   this.method['btcusdt@aggTrade'] = 'onAggTrade';
+        //   streamNames.push('btcusdt@aggTrade');
+        //   this.method['wavesusdt@trade'] = 'onTrade';
+        //   streamNames.push('wavesusdt@trade');
+        // }
         this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
         this.stream.addEventListener('message', this.onStreamMessage);
         this.stream.addEventListener('error', this.onStreamError);
@@ -235,13 +249,25 @@ export class Ticker {
         let bar;
         if (map[time]) {
           bar = map[time];
+          this.volume.sum -= bar.volume;
           bar.update(update.k);
+          this.volume.sum += bar.volume;
+          if (bar.volume > this.volume.average * (this.config?.averageVolumeMultiplier || 1)) {
+            this.highVolume = bar.volume;
+            if (!this.volumeViewed) {
+              this.state.events$.next(this);
+            }
+          } else {
+            this.highVolume = 0;
+          }
         } else {
+          this.volume.average = this.volume.sum / array.length;
           bar = new Bar(update.k);
           map[time] = bar;
           array.push(bar);
           this.setAverageVolume();
         }
+        this.volume.current = bar.volume;
         if (this.series) {
           const {time, open, high, low, close} = bar;
           this.series.update({
@@ -270,8 +296,14 @@ export class Ticker {
     this.orderBook?.onBestPrice(update);
   };
 
+  // onAggTrade = (update) => {
+  // };
+
+  // onTrade = (update) => {
+  // }
+
   setAverageVolume = () => {
-    const data = this.chartData?.[m5]?.array;
+    const data = this.chartData?.[M5]?.array;
     let count = this.config?.last5mCount || 10;
     if (data?.length && data.length > 1) {
       if (count + 1 > data.length) count = data.length - 1;
@@ -293,15 +325,37 @@ export class Ticker {
     }
   };
 
+  getVolumes = () => {
+    const volumes = {};
+    if (this.volume.average) {
+      volumes.average = getShorted(this.volume.average);
+      if (this.closePrice) {
+        volumes.average += ` ($${getShorted(this.volume.average * this.closePrice)})`;
+      }
+    }
+    if (this.highVolume) {
+      volumes.highVolume = getShorted(this.highVolume);
+      if (this.closePrice) {
+        volumes.highVolume += ` ($${getShorted(this.highVolume * this.closePrice)})`;
+      }
+    }
+    return volumes;
+  };
+
   setChartData = () => {
-    if (this.series && this.chartData?.[m5]?.array) {
-      this.series.setData(this.chartData[m5].array.map((bar) => ({
-        time: bar.time / 1000,
-        open: bar.open,
-        high: bar.high,
-        low: bar.low,
-        close: bar.close,
-      })));
+    if (this.series && this.chartData?.[M5]?.array) {
+      this.series.setData(this.chartData[M5].array.map((bar) => {
+        this.volume.sum += bar.volume;
+        return {
+          time: bar.time / 1000,
+          open: bar.open,
+          high: bar.high,
+          low: bar.low,
+          close: bar.close,
+        };
+      }));
+      this.volume.count = this.chartData[M5].array.length;
+      this.volume.average = this.volume.sum / this.volume.count;
       this.setChartOptions();
       this.openStream();
       this.chart.timeScale().subscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);
@@ -320,7 +374,7 @@ export class Ticker {
             delete barMap[prevBarTime];
             if (data && this.series) {
               data.forEach((d) => {
-                const bar = new Bar(d);
+                const bar = new Bar(d, M5);
                 barMap[bar.time] = bar
               });
               this.chartData[M5].array = Object.keys(barMap)
@@ -329,7 +383,7 @@ export class Ticker {
                   barMap[time].i = i;
                   return barMap[time];
                 });
-              this.series.setData(this.chartData[m5].array.map((bar) => ({
+              this.series.setData(this.chartData[M5].array.map((bar) => ({
                 time: bar.time / 1000,
                 open: bar.open,
                 high: bar.high,
@@ -375,16 +429,17 @@ export class Ticker {
       Object.keys(this.levels).forEach((price) => {
         this.levels[price].destroy();
       });
-      this.setExtremes(h1);
-      this.setExtremes(d1);
+      this.setExtremes(H1);
+      this.setExtremes(D1);
     }
   };
 
   setExtremes = (interval) => {
-    const timeDelta = {
-      [H1]: 60 * 60 * 1000 * 5,
-      [D1]: 60 * 60 * 1000 * 24 * 10
+    const intervalDelta = {
+      [H1]: this.config.hourlyDelta,
+      [D1]: this.config.dailyDelta
     };
+    const indexDelta = intervalDelta[interval];
     const data = this.chartData?.[interval]?.array;
     const minLevelAge = this.config?.minLevelAge || 1;
     const minLevelAgeTime = Date.now() - minLevelAge * 1000 * 60 * 60;
@@ -412,7 +467,7 @@ export class Ticker {
             high < current.high.price &&
             current.high.time < minLevelAgeTime
           ) {
-            if (prev.high.time && prev.high.time - timeDelta[interval] < current.high.time) {
+            if (prev.high.i && prev.high.i < current.high.i + indexDelta) {
               highs.pop();
             }
             prev.high = {...current.high};
@@ -428,7 +483,7 @@ export class Ticker {
             low > current.low.price &&
             current.low.time < minLevelAgeTime
           ) {
-            if (prev.low.time && prev.low.time - timeDelta[interval] < current.low.time) {
+            if (prev.low.i && prev.low.i < current.low.i + indexDelta) {
               lows.pop();
             }
             prev.low = {...current.low};
