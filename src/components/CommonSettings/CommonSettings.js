@@ -46,7 +46,7 @@ export const CommonSettings = (props) => {
         });
       }
       if (state.events[ticker].volume) {
-        state.events[ticker].volume.volumeVieved = true;
+        state.events[ticker].volume.volumeViewed = true;
       }
       delete state.events[ticker];
       state.dispatch?.(state);
@@ -132,8 +132,9 @@ export const CommonSettings = (props) => {
         const volume = getVolume(ticker);
         if (!levels && !orders && !volume) {
           delete state.events[ticker];
+          return null;
         }
-        return levels || orders || volume? (
+        return (
           <Card
             className={s.card}
             extra={<div className={s.controls}>
@@ -148,8 +149,7 @@ export const CommonSettings = (props) => {
             {orders}
             {volume}
           </Card>
-        ) : null;
-      })}
+        )})}
     </Modal>
   </>;
 };

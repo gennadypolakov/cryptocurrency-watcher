@@ -1,11 +1,11 @@
 import {OrderBook} from './OrderBook';
 import {createChart as createChartFn} from 'lightweight-charts';
 import {getSymbolChartData, getSymbolChartDataByRange} from '../api';
-import {chartLimit} from '../config';
+import {chartLimit, volumeViewedTimeout} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
-import {barPrices, D1, H1, HIGH, LOW, M5} from '../constants';
+import {barPrices, btcusdt, D1, H1, HIGH, LOW, M5} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
@@ -73,6 +73,7 @@ export class Ticker {
   };
   highVolume = 0;
   volumeViewed = false;
+  volumeViewedTimeoutId;
 
   constructor(name, state) {
     this.name = name;
@@ -254,8 +255,11 @@ export class Ticker {
           this.volume.sum += bar.volume;
           if (bar.volume > this.volume.average * (this.config?.averageVolumeMultiplier || 1)) {
             this.highVolume = bar.volume;
-            if (!this.volumeViewed) {
+            if (!this.volumeViewed && !this.state?.tickers?.[btcusdt]?.highVolume) {
               this.state.events$.next(this);
+              setTimeout(() => {
+                this.volumeViewed = false;
+              }, 60 * 1000 * volumeViewedTimeout);
             }
           } else {
             this.highVolume = 0;
