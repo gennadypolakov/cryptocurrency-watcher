@@ -8,7 +8,7 @@ import {defaultConfig} from '../../model/Settings';
 import {getShorted} from '../../model/Ticker';
 
 export const Settings = (props) => {
-  const {state, name} = props;
+  const {lang, name, state} = props;
   const [config, setConfig] = useState();
   const [disabled, setDisabled] = useState(true);
   const [resetDisabled, setResetDisabled] = useState(false);
@@ -60,7 +60,6 @@ export const Settings = (props) => {
       setConfig(newConfig);
     } else if (state?.config?.map) {
       const newConfig = {...state.config.map};
-      console.log('newConfig', newConfig);
       formRef.current?.setFieldsValue(newConfig);
       setConfig(newConfig);
       setAutoScroll(state.config.autoScroll)
@@ -121,8 +120,8 @@ export const Settings = (props) => {
   return config ? (
     <div className={s.settings}>
       {averageVolume ? <div>
-        <div>Средний объем {averageVolumeAsString}</div>
-        <div>Минимальный ордер {minOrder}</div>
+        <div>{lang?.averageVolume} {averageVolumeAsString}</div>
+        <div>{lang?.minOrder} {minOrder}</div>
       </div> : null}
       <Form
         ref={formRef}
@@ -136,7 +135,7 @@ export const Settings = (props) => {
         {!name && columnCounts.length > 1
           ? <Form.Item
             name="columnCount"
-            label="Графиков в ширину"
+            label={lang?.columnCount}
           >
             <Radio.Group>
               {columnCounts.map((n) => <Radio.Button value={n} key={n}>{n}</Radio.Button>)}
@@ -145,9 +144,9 @@ export const Settings = (props) => {
           : null}
         <Form.Item name="priceDistance">
           <Input
-            addonBefore="Расстояние до уровня или ордера"
+            addonBefore={lang?.priceDistance}
             suffix={
-              <Tooltip title="Минимальное расстояние от текущей цены до ближайшего часового или дневного уровня или лимитного ордера в долях единицы от цены, чтоб сработало уведомление">
+              <Tooltip title={lang?.priceDistanceDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -155,9 +154,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="minLevelAge">
           <Input
-            addonBefore="Возраст уровня"
+            addonBefore={lang?.minLevelAge}
             suffix={
-              <Tooltip title="Не уведомлять о приближении цены к уровням младше указанного возраста в часах (возможно дробное значение через точку)">
+              <Tooltip title={lang?.minLevelAgeDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -165,9 +164,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="hourlyDelta">
           <Input
-            addonBefore="Расстояние между часовыми уровнями"
+            addonBefore={lang?.hourlyDelta}
             suffix={
-              <Tooltip title="Минимальное количество интервалов между двумя уровнями">
+              <Tooltip title={lang?.hourlyDeltaDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -175,9 +174,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="dailyDelta">
           <Input
-            addonBefore="Расстояние между дневными уровнями"
+            addonBefore={lang?.dailyDelta}
             suffix={
-              <Tooltip title="Минимальное количество интервалов между двумя уровнями">
+              <Tooltip title={lang?.dailyDeltaDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -185,9 +184,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="minOrderPercentage">
           <Input
-            addonBefore="Размер лимитного ордера"
+            addonBefore={lang?.minOrderPercentage}
             suffix={
-              <Tooltip title="Доля от среднего объема торгов за последние N 5-минуток (за исключением последней не закрытой), если размер лимитной заявки больше вычисленного объема, то он отобразится на графике. Если на графике слишком много лимитных заявок, возможно стоит увеличить значение.">
+              <Tooltip title={lang?.minOrderPercentageDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -195,9 +194,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="orderTimeout">
           <Input
-            addonBefore="Таймаут лимитного ордера"
+            addonBefore={lang?.orderTimeout}
             suffix={
-              <Tooltip title="Если ордер старше указанного количества минут, он отобразится на графике (возможны дробные значения через точку)">
+              <Tooltip title={lang?.orderTimeoutDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -205,9 +204,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="last5mCount">
           <Input
-            addonBefore="Количество 5-минуток для среднего объема"
+            addonBefore={lang?.last5mCount}
             suffix={
-              <Tooltip title="Сколько последних 5-минуток использовать для вычисления среднего объема для сравнения с объемом лимитного ордера">
+              <Tooltip title={lang?.last5mCountDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -215,9 +214,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="averageVolumeMultiplier">
           <Input
-            addonBefore="Коэффициент среднего объема"
+            addonBefore={lang?.averageVolumeMultiplier}
             suffix={
-              <Tooltip title="Используется для уведомлений о повышенных объемах. Объем текущего пятиминутного интервала сравнивается со средним объемом умноженным на данный коэффициент.">
+              <Tooltip title={lang?.averageVolumeMultiplierDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -225,9 +224,9 @@ export const Settings = (props) => {
         </Form.Item>
         <Form.Item name="notificationTimeout">
           <Input
-            addonBefore="Таймаут уведомлений в минутах"
+            addonBefore={lang?.notificationTimeout}
             suffix={
-              <Tooltip title="Время в минутах, в течение которого не уведомлять о монете">
+              <Tooltip title={lang?.notificationTimeoutDesc}>
                 <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
               </Tooltip>
             }
@@ -235,14 +234,14 @@ export const Settings = (props) => {
         </Form.Item>
         {!name ?
           <>
-            <Form.Item label="Автопереход к графику" name="autoScroll" valuePropName="checked">
+            <Form.Item label={lang?.autoScroll} name="autoScroll" valuePropName="checked">
               <Switch/>
             </Form.Item>
             {autoScroll ? <Form.Item name="autoScrollTimeout">
               <Input
-                addonBefore="Таймаут автоперехода"
+                addonBefore={lang?.autoScrollTimeout}
                 suffix={
-                  <Tooltip title="Задержка в секундах до перехода к следующему событию при наличии такого.">
+                  <Tooltip title={lang?.autoScrollTimeoutDesc}>
                     <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
                   </Tooltip>
                 }
@@ -257,7 +256,7 @@ export const Settings = (props) => {
             disabled={disabled}
             className={s.button}
           >
-            Сохранить
+            {lang?.save}
           </Button>
           <Button
             type="default"
@@ -265,10 +264,10 @@ export const Settings = (props) => {
             disabled={resetDisabled}
             className={s.button}
           >
-            Сбросить
+            {lang?.reset}
           </Button>
         </Form.Item>
       </Form>
     </div>
-  ) : <div>Загрузка данных...</div>;
+  ) : <div>{lang?.loading}</div>;
 };

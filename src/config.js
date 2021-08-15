@@ -1,4 +1,5 @@
 import {LineStyle} from 'lightweight-charts';
+import {EN, RU} from './constants';
 
 export const priceLine = {
   price: 0,
@@ -23,6 +24,14 @@ export const chartLimit = {
   [h1]: 500,
   [d1]: 500
 };
+
+export const languages = {
+  ru: RU,
+  be: RU,
+  uk: RU
+}
+
+
 export const minOrderPercentage = 1; // доля от среднего 5-минутного объема
 export const last5mCount = 10; // количество 5-минуток для среднего объема
 export const priceDistance = 0.005; // расстояние до цены в долях от цены
@@ -40,3 +49,4 @@ export const dailyDelta = 10; // минимальное расстояние в 
 export const hourlyDelta = 8; // минимальное расстояние в количестве интервалов для вычисления дневных уровней
 export const autoScroll = false; // автопереход к событию
 export const autoScrollTimeout = 5; // автопереход к событию
+export const language = EN;

@@ -8,7 +8,7 @@ import {Loader} from '../Loader/Loader';
 export const Chart = (props) => {
   const chartRef = useRef();
   const chartContainerRef = useRef();
-  const {ticker} = props;
+  const {ticker, lang} = props;
   const {name: symbol, state} = ticker || {};
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [acceptVisible, setAcceptVisible] = useState(false);
@@ -25,6 +25,7 @@ export const Chart = (props) => {
     height += 'px';
     return {width, height};
   }, [state?.favoritesHeight, state?.width]);
+
 
   const favorite = ticker?.state?.favorites?.some((name) => name === ticker.name);
   const last5mCount = ticker?.config?.last5mCount;
@@ -94,14 +95,14 @@ export const Chart = (props) => {
       >
         <div className={s.header}>
           <div className={s.info}>
-            <span title="5м график" className={s.title}>{symbol}</span>
-            {ticker?.averageVolumeAsString ? <Tooltip title={`Средний объем за последние (${last5mCount}) пятиминутные периоды`}>
+            <span title={`5m ${lang?.chart}`} className={s.title}>{symbol}</span>
+            {ticker?.averageVolumeAsString ? <Tooltip title={lang?.last5mAverageVolume(last5mCount)}>
               <span>{ticker?.averageVolumeAsString}</span>
             </Tooltip> : null}
-            {average ? <Tooltip title="Средний объем за все загруженные пятиминутные периоды">
+            {average ? <Tooltip title={lang?.allTimeAverageVolume}>
               <span>{average}</span>
             </Tooltip> : null}
-            {highVolume ? <Tooltip title="Текущий повышенный объем">
+            {highVolume ? <Tooltip title={lang?.currentHighVolume}>
               <span className={s.highVolume}>{highVolume}</span>
             </Tooltip> : null}
           </div>
@@ -109,25 +110,25 @@ export const Chart = (props) => {
             {favorite
               ? <StarFilled
                 onClick={addFavorite}
-                title="Удалить из избранного"
+                title={lang?.removeFavorite}
               />
               : <StarOutlined
                 onClick={addFavorite}
-                title="Добавить в избранное"
+                title={lang?.addFavorite}
               />
             }
             <PoweroffOutlined
               onClick={enableChart}
-              title={`${chart ? 'Выключить' : 'Включить'} управление`}
+              title={`${chart ? lang?.disable : lang?.enable} ${lang?.chart}`}
               style={{color: chart ? 'black' : 'gray'}}
             />
             <SettingOutlined
               onClick={() => setSettingsVisible(v => !v)}
-              title="Индивидуальные настройки"
+              title={lang?.coinSettings}
             />
             <CloseOutlined
               onClick={() => setAcceptVisible(v => !v)}
-              title="Закрыть"
+              title={lang?.close}
             />
           </div>
         </div>
@@ -142,18 +143,18 @@ export const Chart = (props) => {
         footer={null}
         width={800}
       >
-        <Settings state={ticker.state} name={symbol} />
+        <Settings state={ticker.state} name={symbol} lang={lang} />
       </Modal>
       <Modal
         centered
         visible={acceptVisible}
         onOk={() => ticker?.disable?.()}
         onCancel={() => setAcceptVisible(false)}
-        okText="Да"
-        cancelText="Отмена"
+        okText={lang?.ok}
+        cancelText={lang?.cancel}
       >
         <div>
-          Отключить {symbol}?
+          {lang?.disable} {symbol}?
         </div>
       </Modal>
     </>

@@ -5,7 +5,7 @@ import {useEffect, useRef} from 'react';
 import s from './Favorites.module.scss';
 
 export const Favorites = (props) => {
-  const {state} = props;
+  const {lang, state} = props;
   const ref = useRef();
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export const Favorites = (props) => {
         <CloseOutlined
           onClick={remove(name)}
           className={s.remove}
-          title="Удалить из избранного"
+          title={lang?.removeFavorite}
         />
       </Button>
     </div>)}

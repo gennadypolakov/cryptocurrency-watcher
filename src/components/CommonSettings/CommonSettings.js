@@ -11,7 +11,7 @@ import {getShorted} from '../../model/Ticker';
 const {TabPane} = Tabs;
 
 export const CommonSettings = (props) => {
-  const {state} = props;
+  const {state, lang} = props;
   const [visible, setVisible] = useState(false);
   const [eventsVisible, setEventsVisible] = useState(false);
   const [play, setPlay] = useState(state?.play);
@@ -36,24 +36,8 @@ export const CommonSettings = (props) => {
 
   const scrollTo = (ticker) => () => {
     state?.scrollTo(ticker);
+    state?.removeViewedEvent(ticker);
     setEventsVisible(false);
-    if (state.events?.[ticker]) {
-      if (state.events[ticker].level) {
-        Object.keys(state.events[ticker].level).forEach((p) => {
-          state.events[ticker].level[p].viewed = true;
-        });
-      }
-      if (state.events[ticker].order) {
-        Object.keys(state.events[ticker].order).forEach((p) => {
-          state.events[ticker].order[p].viewed = true;
-        });
-      }
-      if (state.events[ticker].volume) {
-        state.events[ticker].volume.volumeViewed = true;
-      }
-      delete state.events[ticker];
-      state.dispatch?.(state);
-    }
   }
 
   const disableNotifications = (ticker) => () => {
@@ -68,7 +52,7 @@ export const CommonSettings = (props) => {
     if (state.events[ticker]?.level) {
       const levelMap = state.events[ticker].level;
       const levels = Object.keys(levelMap).map((price) => levelMap[price]);
-      return levels.map((level) => <div key={`l${level.price}`}>Уровень: цена {level.price}, интервал {level.interval}</div>)
+      return levels.map((level) => <div key={`l${level.price}`}>{lang?.level}: {lang?.price} {level.price}, {lang?.interval} {level.interval}</div>)
     }
     return null;
   };
@@ -80,7 +64,7 @@ export const CommonSettings = (props) => {
         .sort((a, b) => b - a)
         .map((price) => orderMap[price])
         .filter((o) => o.volume);
-      return orders.map((order) => <div key={`o${order.price}`}>Лимитный ордер: цена {order.price}, объем {order.volume}</div>)
+      return orders.map((order) => <div key={`o${order.price}`}>{lang?.limitOrder}: {lang?.price} {order.price}, {lang?.volume} {order.volume}</div>)
     }
     return null;
   };
@@ -88,7 +72,7 @@ export const CommonSettings = (props) => {
   const getVolume = (ticker) => {
     if (state.events[ticker]?.volume?.highVolume) {
       const volume = state.events[ticker]?.volume?.highVolume;
-      return <div>Повышенный объем: {getShorted(volume)}</div>;
+      return <div>{lang?.highVolume}: {getShorted(volume)}</div>;
     }
     return null;
   };
@@ -97,8 +81,8 @@ export const CommonSettings = (props) => {
     <div className={s.settings}>
       {autoScroll
         ? (play
-          ? <PauseOutlined className={s.icon}  onClick={() => playScroll(false)} title="Пауза автопереход" />
-          : <CaretRightFilled className={s.icon} onClick={() => playScroll(true)} title="Включить автопереход при появлении новых событий" />
+          ? <PauseOutlined className={s.icon}  onClick={() => playScroll(false)} title={lang?.pauseAutoscroll} />
+          : <CaretRightFilled className={s.icon} onClick={() => playScroll(true)} title={lang?.enableAutoscroll} />
         ) : null}
       {eventCount ?
         <Badge count={eventCount}>
@@ -108,7 +92,7 @@ export const CommonSettings = (props) => {
       <SettingOutlined className={s.icon} onClick={() => setVisible(v => !v)}/>
     </div>
     <Modal
-      title="Общие настройки"
+      title={lang?.commonSettings}
       centered
       visible={visible}
       onOk={() => setVisible(false)}
@@ -117,16 +101,16 @@ export const CommonSettings = (props) => {
       width={800}
     >
       <Tabs defaultActiveKey="1">
-        <TabPane tab="Монеты" key="1">
-          <Tickers state={state}/>
+        <TabPane tab={lang?.coins} key="1">
+          <Tickers {...props} />
         </TabPane>
-        <TabPane tab="Настройки" key="2">
-          <Settings state={state}/>
+        <TabPane tab={lang?.settings} key="2">
+          <Settings {...props} />
         </TabPane>
       </Tabs>
     </Modal>
     <Modal
-      title="Уведомления"
+      title={lang?.notifications}
       centered
       visible={eventsVisible}
       onOk={() => setEventsVisible(false)}
@@ -146,7 +130,7 @@ export const CommonSettings = (props) => {
           <Card
             className={s.card}
             extra={<div className={s.controls}>
-              <CloseOutlined onClick={disableNotifications(ticker)} title="Отключить уведомления" />
+              <CloseOutlined onClick={disableNotifications(ticker)} title={lang?.disableNotifications} />
             </div>}
             key={ticker}
             onClick={scrollTo(ticker)}

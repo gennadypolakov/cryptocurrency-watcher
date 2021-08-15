@@ -6,9 +6,9 @@ import {Ticker} from './Ticker';
 import {Settings} from './Settings';
 import {Level} from './Level';
 import {Order} from './Order';
-import {apiTimeout} from '../config';
+import {apiTimeout, languages} from '../config';
 import {notification} from 'antd';
-import {blinkChartBorder} from '../constants';
+import {blinkChartBorder, EN} from '../constants';
 
 export class State {
   apiTimeout;
@@ -26,6 +26,10 @@ export class State {
   loading = {};
   firstStart = false;
   favoritesHeight = 0;
+
+  lang = EN;
+  translation = {};
+
   mouseOn;
   scrolledTo;
   scrollTimeoutId;
@@ -52,7 +56,22 @@ export class State {
 
   constructor(dispatch) {
     this.dispatch = dispatch;
+    this.setLanguage();
   }
+
+  setLanguage = () => {
+    console.log('setLanguage')
+    if (navigator.language && languages[navigator.language]) {
+      this.lang = languages[navigator.language];
+    }
+    console.log(this.lang);
+    import(`../${this.lang}`).then((module) => {
+      if (module.translation) {
+        this.translation = module.translation;
+        this.dispatch(this);
+      }
+    });
+  };
 
   scrollTo = (name) => {
     const chartContainer = this.tickers?.[name]?.chartContainer;
@@ -86,6 +105,7 @@ export class State {
   };
 
   init = () => {
+    console.log('init');
     if (this.clientWidth) {
       if (!this.config) {
         this.config = new Settings(this);
@@ -182,19 +202,20 @@ export class State {
   };
 
   removeViewedEvent = (name) => {
-    if (name && this.events[name]) {
-      if (this.events[name].level) {
-        Object.keys(this.events[name].level).forEach((p) => {
-          this.events[name].level[p].viewed = true;
+    const events = this.events[name];
+    if (name && events) {
+      if (events.level) {
+        Object.keys(events.level).forEach((p) => {
+          events.level[p].viewed = true;
         });
       }
-      if (this.events[name].order) {
-        Object.keys(this.events[name].order).forEach((p) => {
-          this.events[name].order[p].viewed = true;
+      if (events.order) {
+        Object.keys(events.order).forEach((p) => {
+          events.order[p].viewed = true;
         });
       }
-      if (this.events[name].volume) {
-        this.events[name].volume.volumeViewed = true;
+      if (events.volume) {
+        events.volume.volumeViewed = true;
       }
       delete this.events[name];
       this.dispatch?.(this);

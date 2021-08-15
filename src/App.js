@@ -16,6 +16,12 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
+    if (state?.translation) {
+      document.title = state.translation.title;
+    }
+  }, [state?.translation]);
+
+  useEffect(() => {
     if (!state) {
       setStateWrapper({state: new State(dispatch)});
     }
@@ -26,6 +32,7 @@ export const App = () => {
       if (!state?.width) {
         state?.setWidth(ref.current.clientWidth);
         ref.current.style.height = 'auto';
+        ref.current.style.minHeight = '100%';
       }
     } else {
       if (ref.current) {
@@ -40,9 +47,9 @@ export const App = () => {
     style={{paddingBottom: state?.favoritesHeight ? state.favoritesHeight + 10 + 'px'  : '20px'}}
     ref={ref}
   >
-    {state?.tickerNames?.map((ticker) => <Chart ticker={state.tickers[ticker]} key={ticker} />)}
+    {state?.tickerNames?.map((ticker) => <Chart ticker={state.tickers[ticker]} key={ticker} lang={state?.translation} />)}
     <Loader loading={!state?.tickerNames} />
-    {state?.config ? <CommonSettings state={state} /> : null}
-    <Favorites state={state} />
+    {state?.config ? <CommonSettings state={state} lang={state?.translation} /> : null}
+    <Favorites state={state} lang={state?.translation} />
   </div>;
 };

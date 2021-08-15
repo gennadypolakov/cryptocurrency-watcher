@@ -5,9 +5,8 @@ import s from './Tickers.module.scss';
 import {StarFilled} from '@ant-design/icons';
 
 export const Tickers = (props) => {
-  const {state} = props;
+  const {lang, state} = props;
   const [tickerNames, setTickerNames] = useState();
-  // const [allChecked, setAllChecked] = useState();
 
   const favorites = state?.favorites?.reduce((acc, name) => {acc[name] = true; return acc}, {});
 
@@ -43,7 +42,7 @@ export const Tickers = (props) => {
   return <div className={s.tickers}>
     {tickerNames?.length
       ? <>
-        <div key="all"><Checkbox onChange={onChange('all')} checked={allChecked}>выбрать все</Checkbox></div>
+        <div key="all"><Checkbox onChange={onChange('all')} checked={allChecked}>{lang?.selectAll}</Checkbox></div>
         {tickerNames.map((name) => <div key={name}>
           <Checkbox
             onChange={onChange(name)}
@@ -54,6 +53,6 @@ export const Tickers = (props) => {
           </Checkbox>
         </div>)}
       </>
-      : <div>Данные загружаются...</div>}
+      : <div>{lang?.loading}</div>}
   </div>;
 };
