@@ -38,3 +38,5 @@ export const averageVolumeMultiplier = 2; // множитель среднего
 export const volumeViewedTimeout = 30; // таймаут уведомлений о повышенном объеме
 export const dailyDelta = 10; // минимальное расстояние в количестве интервалов для вычисления дневных уровней
 export const hourlyDelta = 8; // минимальное расстояние в количестве интервалов для вычисления дневных уровней
+export const autoScroll = false; // автопереход к событию
+export const autoScrollTimeout = 5; // автопереход к событию

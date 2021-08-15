@@ -70,6 +70,18 @@ export const Chart = (props) => {
     setChart(!chart);
   }
 
+  const onMouseEnter = () => {
+    if (ticker) {
+      ticker.state.mouseOn = ticker.name;
+    }
+  }
+
+  const onMouseLeave = () => {
+    if (ticker) {
+      ticker.state.mouseOn = null;
+    }
+  }
+
   return (
     <>
       <div
@@ -77,6 +89,8 @@ export const Chart = (props) => {
         id={symbol}
         ref={chartContainerRef}
         style={{width, height}}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
       >
         <div className={s.header}>
           <div className={s.info}>

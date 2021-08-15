@@ -8,6 +8,7 @@ import {Level} from './Level';
 import {Order} from './Order';
 import {apiTimeout} from '../config';
 import {notification} from 'antd';
+import {blinkChartBorder} from '../constants';
 
 export class State {
   apiTimeout;
@@ -25,6 +26,10 @@ export class State {
   loading = {};
   firstStart = false;
   favoritesHeight = 0;
+  mouseOn;
+  scrolledTo;
+  scrollTimeoutId;
+  play = true;
 
   clientWidth;
   width;
@@ -48,6 +53,22 @@ export class State {
   constructor(dispatch) {
     this.dispatch = dispatch;
   }
+
+  scrollTo = (name) => {
+    const chartContainer = this.tickers?.[name]?.chartContainer;
+    if (chartContainer) {
+      this.scrolledTo = name;
+      window.scrollTo({
+        top: chartContainer.offsetTop - 5,
+        behavior: 'smooth'
+      });
+      chartContainer.classList.add(blinkChartBorder);
+      setTimeout(() => {
+        chartContainer.classList.remove(blinkChartBorder);
+      }, 3000);
+    }
+    this.removeViewedEvent(name);
+  };
 
   getWidth = () => {
     let count = this.config?.columnCount;
@@ -87,18 +108,21 @@ export class State {
   };
 
   onEvent = (event) => {
+    let tickerName;
     if (event && event.price && event.ticker?.name) {
       if (
         event instanceof Level &&
         !this.events[event.ticker.name]?.level?.[event.price]
       ) {
         set(this.events, [event.ticker.name, 'level', event.price], event);
+        tickerName = event.ticker.name;
         this.dispatch?.(this);
       } else if (
         event instanceof Order &&
         !this.events[event.ticker.name]?.order?.[event.price]
       ) {
         set(this.events, [event.ticker.name, 'order', event.price], event);
+        tickerName = event.ticker.name;
         this.dispatch?.(this);
       }
     } else if (
@@ -106,9 +130,41 @@ export class State {
       !this.events[event.name]?.volume
     ) {
       set(this.events, [event.name, 'volume'], event);
+      tickerName = event.name;
       this.dispatch?.(this);
     }
+    if (tickerName) {
+      if (!this.events[tickerName]) {
+        this.queue.push(tickerName);
+      }
+      this.scrollToNext(tickerName);
+    }
   }
+
+  queue = [];
+
+  scrollToNext = (name) => {
+    if (this.config?.autoScroll && this.scrolledTo !== this.mouseOn && this.play) {
+      if (!this.scrollTimeoutId) {
+        let tickerName = name;
+        if (!tickerName) {
+          tickerName = this.queue[0];
+          this.queue = this.queue.slice(1);
+          if (!tickerName && this.events) {
+            tickerName = Object.keys(this.events).sort()[0];
+          }
+        }
+        if (tickerName) {
+          this.scrolledTo = tickerName;
+          this.scrollTo(tickerName);
+          this.scrollTimeoutId = setTimeout(() => {
+            this.scrollTimeoutId = null;
+            this.scrollToNext();
+          }, this.config.autoScrollTimeout * 1000);
+        }
+      }
+    }
+  };
 
   removeEvent = (name, price, type) => {
     if (name && price && type && this.events[name]?.[type]?.[price]) {
@@ -123,6 +179,27 @@ export class State {
         this.dispatch(this);
       }
     }
+  };
+
+  removeViewedEvent = (name) => {
+    if (name && this.events[name]) {
+      if (this.events[name].level) {
+        Object.keys(this.events[name].level).forEach((p) => {
+          this.events[name].level[p].viewed = true;
+        });
+      }
+      if (this.events[name].order) {
+        Object.keys(this.events[name].order).forEach((p) => {
+          this.events[name].order[p].viewed = true;
+        });
+      }
+      if (this.events[name].volume) {
+        this.events[name].volume.volumeViewed = true;
+      }
+      delete this.events[name];
+      this.dispatch?.(this);
+    }
+    this.queue = this.queue.filter((n) => n !== name);
   };
 
   onError = (callback, message = 'Ошибка загрузки данных') => {

@@ -1,12 +1,11 @@
 import {useState} from 'react';
-import {CloseOutlined, ExclamationCircleOutlined, SettingOutlined} from '@ant-design/icons';
+import {CaretRightFilled, CloseOutlined, ExclamationCircleOutlined, PauseOutlined, SettingOutlined} from '@ant-design/icons';
 import {Badge, Card, Modal} from 'antd';
 import {Tabs} from 'antd';
 
 import {Settings} from '../Settings/Settings';
 import {Tickers} from '../Tickers/Tickers';
 import s from './CommonSettings.module.scss';
-import chartStyles from '../Chart/Chart.module.scss';
 import {getShorted} from '../../model/Ticker';
 
 const {TabPane} = Tabs;
@@ -15,6 +14,9 @@ export const CommonSettings = (props) => {
   const {state} = props;
   const [visible, setVisible] = useState(false);
   const [eventsVisible, setEventsVisible] = useState(false);
+  const [play, setPlay] = useState(state?.play);
+
+  const autoScroll = state?.config?.autoScroll;
 
   let eventCount = 0;
   let tickers = [];
@@ -24,15 +26,16 @@ export const CommonSettings = (props) => {
     eventCount = tickers.length;
   }
 
-  const toChart = (ticker) => () => {
-    const chart = state?.tickers?.[ticker]?.chartContainer;
-    if (chart) {
-      chart.scrollIntoView({behavior: 'smooth'});
-      chart.classList.add(chartStyles.blinkChartBorder);
-      setTimeout(() => {
-        chart.classList.remove(chartStyles.blinkChartBorder);
-      }, 3000);
+  const playScroll = (value) => {
+    if (state) {
+      state.play = value;
+      if (value) state.scrollToNext();
     }
+    setPlay(value);
+  }
+
+  const scrollTo = (ticker) => () => {
+    state?.scrollTo(ticker);
     setEventsVisible(false);
     if (state.events?.[ticker]) {
       if (state.events[ticker].level) {
@@ -92,6 +95,11 @@ export const CommonSettings = (props) => {
 
   return <>
     <div className={s.settings}>
+      {autoScroll
+        ? (play
+          ? <PauseOutlined className={s.icon}  onClick={() => playScroll(false)} title="Пауза автопереход" />
+          : <CaretRightFilled className={s.icon} onClick={() => playScroll(true)} title="Включить автопереход при появлении новых событий" />
+        ) : null}
       {eventCount ?
         <Badge count={eventCount}>
           <ExclamationCircleOutlined className={s.icon} onClick={() => setEventsVisible(v => !v)}/>
@@ -141,7 +149,7 @@ export const CommonSettings = (props) => {
               <CloseOutlined onClick={disableNotifications(ticker)} title="Отключить уведомления" />
             </div>}
             key={ticker}
-            onClick={toChart(ticker)}
+            onClick={scrollTo(ticker)}
             size="small"
             title={ticker}
           >

@@ -3,7 +3,6 @@ import {CloseOutlined} from '@ant-design/icons';
 import {useEffect, useRef} from 'react';
 
 import s from './Favorites.module.scss';
-import chartStyles from '../Chart/Chart.module.scss';
 
 export const Favorites = (props) => {
   const {state} = props;
@@ -19,16 +18,7 @@ export const Favorites = (props) => {
     }
   }, [ref, state, state?.favorites?.length]);
 
-  const goTo = (name) => () => {
-    const chart = state?.tickers?.[name]?.chartContainer;
-    if (chart) {
-      chart.scrollIntoView({behavior: 'smooth'});
-      chart.classList.add(chartStyles.blinkChartBorder);
-      setTimeout(() => {
-        chart.classList.remove(chartStyles.blinkChartBorder);
-      }, 3000);
-    }
-  };
+  const scrollTo = (name) => () => state?.scrollTo(name);
 
   const remove = (name) => (e) => {
     e.stopPropagation();
@@ -40,7 +30,7 @@ export const Favorites = (props) => {
 
   return state?.favorites?.length ? <div className={s.favorites} ref={ref}>
     {state.favorites.map((name) => <div key={name} className={s.favorite}>
-      <Button shape="round" size="small" onClick={goTo(name)}>
+      <Button shape="round" size="small" onClick={scrollTo(name)}>
         {name}
         <CloseOutlined
           onClick={remove(name)}

@@ -1,5 +1,5 @@
 import {InfoCircleOutlined} from '@ant-design/icons';
-import {Button, Form, Input, Radio, Tooltip} from 'antd';
+import {Button, Form, Input, Radio, Switch, Tooltip} from 'antd';
 import {isEqual} from 'lodash';
 
 import s from './Settings.module.scss';
@@ -13,6 +13,7 @@ export const Settings = (props) => {
   const [disabled, setDisabled] = useState(true);
   const [resetDisabled, setResetDisabled] = useState(false);
   const [minOrder, setMinOrder] = useState('');
+  const [autoScroll, setAutoScroll] = useState();
   const formRef = useRef();
 
   const tickerConfig = name ? state.tickers[name].config.map : null;
@@ -53,20 +54,18 @@ export const Settings = (props) => {
   }, [name, state.config.map, tickerConfig]);
 
   useEffect(() => {
-    if (state.config.map) {
-      const newConfig = {...state.config.map};
-      formRef.current?.setFieldsValue(newConfig);
-      setConfig(newConfig);
-    }
-  }, [state.config.map]);
-
-  useEffect(() => {
     if (tickerConfig) {
       const newConfig = {...tickerConfig};
       formRef.current?.setFieldsValue(newConfig);
       setConfig(newConfig);
+    } else if (state?.config?.map) {
+      const newConfig = {...state.config.map};
+      console.log('newConfig', newConfig);
+      formRef.current?.setFieldsValue(newConfig);
+      setConfig(newConfig);
+      setAutoScroll(state.config.autoScroll)
     }
-  }, [tickerConfig]);
+  }, [state, state.config.map, tickerConfig]);
 
   const onFinish = (values) => {
     const newConfig = {};
@@ -76,13 +75,17 @@ export const Settings = (props) => {
     if (name && state?.tickers?.[name]?.config) {
       state.tickers[name].config.update(newConfig);
     } else if (state.config) {
+      newConfig.autoScroll = autoScroll;
+      if (!autoScroll) {
+        newConfig.autoScrollTimeout = state.config.autoScrollTimeout;
+      }
       state.config.update(newConfig);
     }
     setDisabled(true);
     state?.dispatch?.(state);
   };
 
-  const onValuesChange = ({minOrderPercentage}) => {
+  const onValuesChange = ({autoScroll, minOrderPercentage}) => {
     if (minOrderPercentage && averageVolume) {
       const minOrderVolume = averageVolume * Number(minOrderPercentage);
       let minOrder = '';
@@ -93,6 +96,9 @@ export const Settings = (props) => {
         }
         setMinOrder(minOrder);
       }
+    }
+    if (autoScroll !== undefined) {
+      setAutoScroll(autoScroll);
     }
   };
 
@@ -227,6 +233,23 @@ export const Settings = (props) => {
             }
           />
         </Form.Item>
+        {!name ?
+          <>
+            <Form.Item label="Автопереход к графику" name="autoScroll" valuePropName="checked">
+              <Switch/>
+            </Form.Item>
+            {autoScroll ? <Form.Item name="autoScrollTimeout">
+              <Input
+                addonBefore="Таймаут автоперехода"
+                suffix={
+                  <Tooltip title="Задержка в секундах до перехода к следующему событию при наличии такого.">
+                    <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+                  </Tooltip>
+                }
+              />
+            </Form.Item> : null}
+          </>
+          : null}
         <Form.Item>
           <Button
             type="primary"

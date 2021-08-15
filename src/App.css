@@ -11,3 +11,16 @@ html, body, #root {
   padding-bottom: 20px;
   height: 100%;
 }
+
+
+.blinkChartBorder {
+  animation: blinkChartBorder 0.5s step-end infinite alternate;
+}
+
+@keyframes blinkChartBorder {
+  50% {
+    border-color: #ff0000;
+    box-shadow: 0 5px 8px 0 rgba(255, 0, 0, 0.4);
+  }
+}
+

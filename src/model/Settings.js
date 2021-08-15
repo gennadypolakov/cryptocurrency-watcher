@@ -1,4 +1,6 @@
 import {
+  autoScroll,
+  autoScrollTimeout,
   averageVolumeMultiplier,
   checkedTimout,
   columnCount, dailyDelta, hourlyDelta,
@@ -14,6 +16,8 @@ import {
 import {Subject} from 'rxjs';
 
 export const defaultConfig = {
+  autoScroll,
+  autoScrollTimeout,
   averageVolumeMultiplier,
   checkedTimout,
   columnCount,
@@ -39,6 +43,20 @@ export class Settings {
   tickers; // {name: string, active: boolean}
 
   config$;
+
+  get autoScroll() {
+    return this.map.autoScroll;
+  };
+  set autoScroll(v){
+    this.map.autoScroll = v;
+  };
+
+  get autoScrollTimeout() {
+    return this.map.autoScrollTimeout;
+  };
+  set autoScrollTimeout(v){
+    this.map.autoScrollTimeout = v;
+  };
 
   get averageVolumeMultiplier() {
     return this.map.averageVolumeMultiplier;
@@ -181,6 +199,14 @@ export class Settings {
       }
       if (!this.dailyDelta) {
         this.dailyDelta = dailyDelta;
+        this.save();
+      }
+      if (!this.autoScroll) {
+        this.autoScroll = autoScroll;
+        this.save();
+      }
+      if (!this.autoScrollTimeout) {
+        this.autoScrollTimeout = autoScrollTimeout;
         this.save();
       }
     } else if (ticker) {

@@ -12,3 +12,4 @@ export const ASK_ORDER_COLOR = '#7b0000';
 export const BID_ORDER_COLOR = '#107b00';
 export const barPrices = ['open', 'high', 'low', 'close'];
 export const btcusdt = 'BTCUSDT';
+export const blinkChartBorder = 'blinkChartBorder';
