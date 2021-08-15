@@ -16,7 +16,7 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    if (state?.translation) {
+    if (state?.translation?.title) {
       document.title = state.translation.title;
     }
   }, [state?.translation]);

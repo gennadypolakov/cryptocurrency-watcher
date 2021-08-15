@@ -60,11 +60,9 @@ export class State {
   }
 
   setLanguage = () => {
-    console.log('setLanguage')
     if (navigator.language && languages[navigator.language]) {
       this.lang = languages[navigator.language];
     }
-    console.log(this.lang);
     import(`../${this.lang}`).then((module) => {
       if (module.translation) {
         this.translation = module.translation;
@@ -105,7 +103,6 @@ export class State {
   };
 
   init = () => {
-    console.log('init');
     if (this.clientWidth) {
       if (!this.config) {
         this.config = new Settings(this);
