@@ -142,6 +142,10 @@ export class State {
         tickerName = event.ticker.name;
         this.dispatch?.(this);
       }
+    } else if (typeof event === 'string' && this.tickers?.[event]) {
+      set(this.events, [event, 'score'], this.tickers[event]);
+      tickerName = event;
+      this.dispatch?.(this);
     } else if (
       event instanceof Ticker &&
       !this.events[event.name]?.volume

@@ -105,6 +105,7 @@ export const Chart = (props) => {
             {highVolume ? <Tooltip title={lang?.currentHighVolume}>
               <span className={s.highVolume}>{highVolume}</span>
             </Tooltip> : null}
+            <span>скоринг {ticker?.volume?.scoring}</span>
           </div>
           <div className={s.controls}>
             {favorite
