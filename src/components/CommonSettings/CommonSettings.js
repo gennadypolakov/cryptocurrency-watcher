@@ -77,6 +77,17 @@ export const CommonSettings = (props) => {
     return null;
   };
 
+  const cards = tickers.map((ticker) => {
+    const levels = getLevels(ticker);
+    const orders = getOrders(ticker);
+    const volume = getVolume(ticker);
+    if (!levels && !orders && !volume) {
+      state?.removeViewedEvent(ticker);
+      return null;
+    }
+    return {ticker, levels, orders, volume};
+  }).filter((card) => !!card);
+
   return <>
     <div className={s.settings}>
       {autoScroll
@@ -118,30 +129,22 @@ export const CommonSettings = (props) => {
       footer={null}
       width={800}
     >
-      {tickers.map((ticker) => {
-        const levels = getLevels(ticker);
-        const orders = getOrders(ticker);
-        const volume = getVolume(ticker);
-        if (!levels && !orders && !volume) {
-          delete state.events[ticker];
-          return null;
-        }
-        return (
-          <Card
-            className={s.card}
-            extra={<div className={s.controls}>
-              <CloseOutlined onClick={disableNotifications(ticker)} title={lang?.disableNotifications} />
-            </div>}
-            key={ticker}
-            onClick={scrollTo(ticker)}
-            size="small"
-            title={ticker}
-          >
-            {levels}
-            {orders}
-            {volume}
-          </Card>
-        )})}
+      {cards.map(({ticker, levels, orders, volume}) => (
+        <Card
+          className={s.card}
+          extra={<div className={s.controls}>
+            <CloseOutlined onClick={disableNotifications(ticker)} title={lang?.disableNotifications} />
+          </div>}
+          key={ticker}
+          onClick={scrollTo(ticker)}
+          size="small"
+          title={ticker}
+        >
+          {levels}
+          {orders}
+          {volume}
+        </Card>
+      ))}
     </Modal>
   </>;
 };

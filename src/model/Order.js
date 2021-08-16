@@ -154,7 +154,7 @@ export class Order {
     }
     const {state, name} = this.ticker || {};
     if (state && name && this.price) {
-      state.removeEvent(name, this.price, 'order');
+      state.removeEvent(name, 'order', this.price);
     }
   };
 

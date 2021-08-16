@@ -113,7 +113,7 @@ export class Level {
     if (this.line) this.ticker?.series?.removePriceLine(this.line);
     if (this.price && this.ticker?.levels?.[this.price]) {
       delete this.ticker.levels[this.price];
-      this.ticker.state?.removeEvent(this.ticker.name, this.price, 'level');
+      this.ticker.state?.removeEvent(this.ticker.name, 'level', this.price);
     }
     this.priceSubscription?.unsubscribe();
   };

@@ -183,15 +183,22 @@ export class State {
     }
   };
 
-  removeEvent = (name, price, type) => {
-    if (name && price && type && this.events[name]?.[type]?.[price]) {
-      delete this.events[name][type][price];
+  removeEvent = (name, type, price) => {
+    if (name && type && this.events[name]?.[type]) {
+      if (price) {
+        delete this.events[name][type][price];
+      } else {
+        delete this.events[name][type];
+      }
       const levels = this.events[name].level;
+      if (levels && !Object.keys(levels).length) {
+        delete this.events[name].level;
+      }
       const orders = this.events[name].order;
-      const volume = this.events[name].volume;
-      const levelsCount = levels ? Object.keys(levels).length : 0;
-      const ordersCount = orders ? Object.keys(orders).length : 0;
-      if (!levelsCount && !ordersCount && !volume) {
+      if (orders && !Object.keys(orders).length) {
+        delete this.events[name].order;
+      }
+      if (!Object.keys(this.events[name]).length) {
         delete this.events[name];
         this.dispatch(this);
       }

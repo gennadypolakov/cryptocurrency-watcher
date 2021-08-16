@@ -66,10 +66,10 @@ export class Ticker {
   isActive = true;
   minLevelAge;
   volume = {
-    sum: 0,
-    count: 0,
     average: 0,
-    current: 0
+    sum: 0,
+    time: 0,
+    timeoutId: null
   };
   highVolume = 0;
   volumeViewed = false;
@@ -255,23 +255,28 @@ export class Ticker {
           this.volume.sum += bar.volume;
           if (bar.volume > this.volume.average * (this.config?.averageVolumeMultiplier || 1)) {
             this.highVolume = bar.volume;
-            if (!this.volumeViewed && !this.state?.tickers?.[btcusdt]?.highVolume) {
+            if (!this.isTimeout && bar.time !== this.volume.time && !this.volumeViewed) {
+              this.volume.time = bar.time;
               this.state.events$.next(this);
-              setTimeout(() => {
-                this.volumeViewed = false;
-              }, 60 * 1000 * volumeViewedTimeout);
+              if (!this.volume.timeoutId) {
+                this.volume.timeoutId = setTimeout(() => {
+                  this.volumeViewed = false;
+                  this.volume.timeoutId = null;
+                }, 60 * 1000 * volumeViewedTimeout);
+              }
             }
           } else {
             this.highVolume = 0;
+            this.state?.removeEvent(this.name, 'volume');
           }
         } else {
           this.volume.average = this.volume.sum / array.length;
           bar = new Bar(update.k);
+          this.volume.sum += bar.volume;
           map[time] = bar;
           array.push(bar);
           this.setAverageVolume();
         }
-        this.volume.current = bar.volume;
         if (this.series) {
           const {time, open, high, low, close} = bar;
           this.series.update({
@@ -358,8 +363,7 @@ export class Ticker {
           close: bar.close,
         };
       }));
-      this.volume.count = this.chartData[M5].array.length;
-      this.volume.average = this.volume.sum / this.volume.count;
+      this.volume.average = this.volume.sum / this.chartData[M5].array.length;
       this.setChartOptions();
       this.openStream();
       this.chart.timeScale().subscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);
