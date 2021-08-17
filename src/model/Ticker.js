@@ -17,7 +17,6 @@ const methods = {
   onOrderBook: '@depth@1000ms',
   onChart: '@kline_5m',
   onBestPrice: '@bookTicker',
-  onTrade: '@trade'
 };
 
 export const getShorted = (v) => {
@@ -68,13 +67,9 @@ export class Ticker {
   minLevelAge;
   volume = {
     average: 0,
-    average10s: 0,
     sum: 0,
     time: 0,
-    timeoutId: null,
-    sum10s: 0,
-    last10: [],
-    scoring: 0
+    timeoutId: null
   };
   highVolume = 0;
   volumeViewed = false;
@@ -207,11 +202,11 @@ export class Ticker {
           streamNames.push(this.name.toLowerCase() + methods[name]);
           this.method[streamName] = name;
         });
-        // if (this.name === 'BTCUSDT') {
-        //   // this.method['btcusdt@aggTrade'] = 'onAggTrade';
-        //   // streamNames.push('btcusdt@aggTrade');
-        //   this.method['btcusdt@trade'] = 'onTrade';
-        //   streamNames.push('btcusdt@trade');
+        // if (this.name === 'WAVESUSDT') {
+        //   this.method['btcusdt@aggTrade'] = 'onAggTrade';
+        //   streamNames.push('btcusdt@aggTrade');
+        //   this.method['wavesusdt@trade'] = 'onTrade';
+        //   streamNames.push('wavesusdt@trade');
         // }
         this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
         this.stream.addEventListener('message', this.onStreamMessage);
@@ -276,7 +271,6 @@ export class Ticker {
           }
         } else {
           this.volume.average = this.volume.sum / array.length;
-          this.volume.average10s = this.volume.sum / (array.length * 5 * 6);
           bar = new Bar(update.k);
           this.volume.sum += bar.volume;
           map[time] = bar;
@@ -314,48 +308,8 @@ export class Ticker {
   // onAggTrade = (update) => {
   // };
 
-  startTime = Date.now();
-
-  onTrade = (update) => {
-    const time = Date.now();
-    if (this.startTime + 10000 > time) {
-      this.volume.sum10s += Number(update.q || 0);
-    } else {
-      this.startTime = time;
-      console.log('average10s', this.volume.average10s)
-      console.log('sum10s', this.volume.sum10s);
-      if (this.volume.last10.length > 5) {
-        this.volume.last10 = this.volume.last10.slice(1);
-        this.volume.last10.push(this.volume.sum10s);
-        const last10 = this.volume.last10;
-        let delta = 0;
-        let prev;
-        let scoring = 0;
-        for (let i = 0; i < 6; i++) {
-          if (i === 0) {
-            prev = last10[0];
-          } else {
-            const current = last10[i];
-            if (current >= prev) scoring++;
-            else scoring--
-            delta += (current - prev);
-            prev = current;
-          }
-        }
-        console.log(this.name);
-        console.log('last10', last10);
-        console.log('delta', delta);
-        console.log('scoring', scoring);
-        this.volume.scoring = scoring;
-        if (scoring > 2) {
-          this.state?.events$?.next(this.name);
-        }
-      } else {
-        this.volume.last10.push(this.volume.sum10s);
-      }
-      this.volume.sum10s = Number(update.q || 0)
-    }
-  }
+  // onTrade = (update) => {
+  // }
 
   setAverageVolume = () => {
     const data = this.chartData?.[M5]?.array;
@@ -410,7 +364,6 @@ export class Ticker {
         };
       }));
       this.volume.average = this.volume.sum / this.chartData[M5].array.length;
-      this.volume.average10s = this.volume.sum / (this.chartData[M5].array.length * 5 * 6);
       this.setChartOptions();
       this.openStream();
       this.chart.timeScale().subscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);

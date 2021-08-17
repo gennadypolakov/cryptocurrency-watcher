@@ -77,24 +77,15 @@ export const CommonSettings = (props) => {
     return null;
   };
 
-  const getIncreasingVolume = (ticker) => {
-    const scoring = state.events[ticker]?.score?.volume?.scoring;
-    if (scoring && scoring > 2) {
-      return <div>Растущий объем: {scoring}</div>;
-    }
-    return null;
-  };
-
   const cards = tickers.map((ticker) => {
     const levels = getLevels(ticker);
     const orders = getOrders(ticker);
     const volume = getVolume(ticker);
-    const scoring = getIncreasingVolume(ticker);
-    if (!levels && !orders && !volume && !scoring) {
+    if (!levels && !orders && !volume) {
       state?.removeViewedEvent(ticker);
       return null;
     }
-    return {ticker, levels, orders, volume, scoring};
+    return {ticker, levels, orders, volume};
   }).filter((card) => !!card);
 
   return <>
@@ -138,7 +129,7 @@ export const CommonSettings = (props) => {
       footer={null}
       width={800}
     >
-      {cards.map(({ticker, levels, orders, volume, scoring}) => (
+      {cards.map(({ticker, levels, orders, volume}) => (
         <Card
           className={s.card}
           extra={<div className={s.controls}>
@@ -149,7 +140,6 @@ export const CommonSettings = (props) => {
           size="small"
           title={ticker}
         >
-          {scoring}
           {levels}
           {orders}
           {volume}
