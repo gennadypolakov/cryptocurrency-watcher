@@ -1,5 +1,5 @@
 import {LineStyle} from 'lightweight-charts';
-import {EN, RU} from './constants';
+import {D1, EN, H1, M5, RU} from './constants';
 
 export const priceLine = {
   price: 0,
@@ -8,21 +8,16 @@ export const priceLine = {
   lineStyle: LineStyle.Solid,
   axisLabelVisible: true
 };
-export const ask = 'ask';
-export const bid = 'bid';
-export const m5 = '5m';
-export const h1 = '1h';
-export const d1 = '1d';
-export const intervals = [m5, h1, d1];
+export const intervals = [M5, H1, D1];
 export const lineWidths = {
-  [m5]: 1,
-  [h1]: 1,
-  [d1]: 2
+  [M5]: 1,
+  [H1]: 1,
+  [D1]: 2
 };
 export const chartLimit = {
-  [m5]: 1000,
-  [h1]: 500,
-  [d1]: 500
+  [M5]: 1000,
+  [H1]: 500,
+  [D1]: 500
 };
 
 export const languages = {
@@ -37,7 +32,7 @@ export const last5mCount = 10; // количество 5-минуток для �
 export const priceDistance = 0.005; // расстояние до цены в долях от цены
 export const checkedTimout = 1; // время через которое просмотренный тикер становится не просмотренным
 export const notificationTimeout = 10; // таймаут уведомлений в минутах
-export const orderTimeout = 0.5; // количество минут, по истечение которых заявка отобразится на графике
+export const orderTimeout = 2; // количество минут, по истечение которых заявка отобразится на графике
 export const minLevelAge = 3; // не сигнализировать об уровнях младше n часов
 export const removeTimeout = 1; // таймаут проверки цены лимитного ордера относительно текущей цены, минуты
 export const removeOrderPercentage = 0.001; // доля от цены на которую она превысила цену ордера, неудаленного по какой-либо причине

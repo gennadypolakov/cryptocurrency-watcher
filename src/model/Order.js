@@ -83,13 +83,13 @@ export class Order {
 
   check = (second = false) => {
       if (this.checkVolume() && this.checkPrice()) {
-        this.removeLine();
-        this.createLine();
         if (second) {
+          this.createLine();
           if (!this.ticker?.isTimeout && !this.viewed) {
             this.ticker?.state?.events$?.next(this);
           }
         } else {
+          this.updateLine();
           this.timeoutId = setTimeout(() => {
             this.check(true);
           }, (this.ticker?.config?.orderTimeout || 0) * 60 * 1000);

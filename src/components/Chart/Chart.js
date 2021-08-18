@@ -4,9 +4,8 @@ import {Modal, Tooltip} from 'antd';
 import {Settings} from '../Settings/Settings';
 import {CloseOutlined, PoweroffOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
 import {Loader} from '../Loader/Loader';
-import {D1, H1, M5} from '../../constants';
-
-const intervals = [M5, H1, D1];
+import {M5} from '../../constants';
+import {intervals} from '../../config';
 
 export const Chart = (props) => {
   const chartRef = useRef();

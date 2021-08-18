@@ -264,7 +264,12 @@ export class Ticker {
           this.volume.sum += bar.volume;
           if (bar.volume > this.volume.average * (this.config?.averageVolumeMultiplier || 1)) {
             this.highVolume = bar.volume;
-            if (!this.isTimeout && bar.time !== this.volume.time && !this.volumeViewed) {
+            if (
+              !this.state.btcHighVolume &&
+              !this.isTimeout &&
+              bar.time !== this.volume.time &&
+              !this.volumeViewed
+            ) {
               this.volume.time = bar.time;
               this.state.events$.next(this);
               if (!this.volume.timeoutId) {
@@ -277,6 +282,9 @@ export class Ticker {
           } else {
             this.highVolume = 0;
             this.state?.removeEvent(this.name, 'volume');
+          }
+          if (this.name === btcusdt) {
+            this.state.btcHighVolume = this.highVolume;
           }
         } else {
           this.volume.average = this.volume.sum / array.length;

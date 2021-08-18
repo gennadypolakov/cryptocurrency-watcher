@@ -1,5 +1,5 @@
 import {CROSSED_LEVEL_COLOR, D1, H1, HIGH, LEVEL_COLOR, M5} from '../constants';
-import {d1, lineWidths, priceLine} from '../config';
+import {lineWidths, priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
 
 export class Level {
@@ -85,7 +85,7 @@ export class Level {
           if (time && existing.time && time < existing.time) {
             removeExisting = true;
           }
-        } else if (interval === d1) {
+        } else if (interval === D1) {
           removeExisting = true;
         }
       }

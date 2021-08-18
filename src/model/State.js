@@ -40,6 +40,8 @@ export class State {
 
   dispatch;
 
+  btcHighVolume = 0;
+
   _favorites;
 
   get favorites() {
