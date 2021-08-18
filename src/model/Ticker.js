@@ -74,6 +74,8 @@ export class Ticker {
   highVolume = 0;
   volumeViewed = false;
   volumeViewedTimeoutId;
+  interval = M5;
+  subscribedOnVisibleTimeRangeChange;
 
   constructor(name, state) {
     this.name = name;
@@ -224,7 +226,14 @@ export class Ticker {
     delete this.stream;
   };
 
+  // sent = false;
+
   onStreamMessage = (e) => {
+    // if (!this.sent) {
+    //   const id = Date.now();
+    //   this.sent = id;
+    //   this.stream.send(`{"method": "LIST_SUBSCRIPTIONS", "id": ${id}}`);
+    // }
     if (e.data) {
       const data = JSON.parse(e.data);
       if (data.data && data.stream && this.method[data.stream]) {
@@ -279,13 +288,15 @@ export class Ticker {
         }
         if (this.series) {
           const {time, open, high, low, close} = bar;
-          this.series.update({
-            time: time / 1000,
-            open,
-            high,
-            low,
-            close,
-          });
+          if (this.interval === M5) {
+            this.series.update({
+              time: time / 1000,
+              open,
+              high,
+              low,
+              close,
+            });
+          }
           this.price$?.next({high, low, time});
           if (!this.closePrice) {
             setTimeout(() => this.state?.dispatch(this.state));
@@ -351,10 +362,49 @@ export class Ticker {
     return volumes;
   };
 
-  setChartData = () => {
-    if (this.series && this.chartData?.[M5]?.array) {
-      this.series.setData(this.chartData[M5].array.map((bar) => {
-        this.volume.sum += bar.volume;
+  setInterval = (interval) => {
+    this.interval = interval;
+    this.setLevels(interval);
+    this.setChartData(interval);
+  };
+
+  setLevels = (interval) => {
+    if (this.levels && Object.keys(this.levels).length) {
+      if (interval === M5) {
+        Object.keys(this.levels).forEach((price) => {
+          if (!this.levels[price].line) {
+            this.levels[price].createLine();
+          }
+        });
+      } else if (interval === H1) {
+        Object.keys(this.levels).forEach((price) => {
+          if (!this.levels[price].line) {
+            this.levels[price].createLine();
+          }
+        });
+      } else if (interval === D1) {
+        Object.keys(this.levels).forEach((price) => {
+          if (this.levels[price].interval === H1 && this.levels[price].line) {
+            this.levels[price].removeLine();
+          }
+        });
+      }
+    }
+  };
+
+  setChartData = (interval = M5) => {
+    const data = this.chartData?.[interval]?.array;
+    if (this.series && data) {
+      let sum;
+      if (!this.volume.sum) {
+        sum = (volume) => {
+          this.volume.sum += volume;
+        }
+      }
+      this.series.setData(data.map((bar) => {
+        if (sum) {
+          sum(bar.volume);
+        }
         return {
           time: bar.time / 1000,
           open: bar.open,
@@ -363,35 +413,45 @@ export class Ticker {
           close: bar.close,
         };
       }));
-      this.volume.average = this.volume.sum / this.chartData[M5].array.length;
-      this.setChartOptions();
+      if (interval === M5) {
+        this.volume.average = this.volume.sum / data.length;
+      }
+      this.setChartOptions(interval);
       this.openStream();
-      this.chart.timeScale().subscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);
+      if (!this.subscribedOnVisibleTimeRangeChange) {
+        this.subscribedOnVisibleTimeRangeChange = true;
+        this.chart.timeScale().subscribeVisibleTimeRangeChange(this.onVisibleTimeRangeChanged);
+      }
     }
   };
 
   onVisibleTimeRangeChanged = (range) => {
-    const barMap = this.chartData?.[M5]?.map;
+    const barMap = this.chartData?.[this.interval]?.map;
     if (range?.from && barMap) {
-      const prevBarTime = range.from * 1000 - 5 * 60 * 1000;
+      const multiplier = {
+        [M5]: 5 * 60,
+        [H1]: 60 * 60,
+        [D1]: 60 * 60 * 24
+      };
+      const prevBarTime = range.from * 1000 - multiplier[this.interval] * 1000;
       const prevBar = barMap[prevBarTime];
       if (!prevBar) {
         barMap[prevBarTime] = 1; // чтоб на время запроса не генерировались новые запросы
-        getSymbolChartDataByRange(this.name, M5, range.from * 1000 - 500 * 5 * 60 * 1000, range.from * 1000)
+        getSymbolChartDataByRange(this.name, this.interval, range.from * 1000 - 500 * multiplier[this.interval] * 1000, range.from * 1000)
           .then((data) => {
             delete barMap[prevBarTime];
             if (data && this.series) {
               data.forEach((d) => {
-                const bar = new Bar(d, M5);
+                const bar = new Bar(d, this.interval);
                 barMap[bar.time] = bar
               });
-              this.chartData[M5].array = Object.keys(barMap)
+              this.chartData[this.interval].array = Object.keys(barMap)
                 .sort((a, b) => barMap[a].time - barMap[b].time)
                 .map((time, i) => {
                   barMap[time].i = i;
                   return barMap[time];
                 });
-              this.series.setData(this.chartData[M5].array.map((bar) => ({
+              this.series.setData(this.chartData[this.interval].array.map((bar) => ({
                 time: bar.time / 1000,
                 open: bar.open,
                 high: bar.high,
@@ -405,11 +465,17 @@ export class Ticker {
     }
   };
 
-  setChartOptions = () => {
+  setChartOptions = (interval = M5) => {
+    const currentTime = Date.now();
+    const visibleRange = {
+      [M5]: 24,
+      [H1]: 200,
+      [D1]: 24 * 200
+    };
     if (this.chart && this.series) {
       this.chart.timeScale().setVisibleRange({
-        from: (Date.now() - 60 * 60 * 24 * 1000) / 1000,
-        to: Date.now() / 1000,
+        from: (currentTime - visibleRange[interval] * 60 * 60 * 1000) / 1000,
+        to: currentTime / 1000
       });
       this.chart.applyOptions({
         timeScale: {

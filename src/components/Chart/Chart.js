@@ -4,6 +4,9 @@ import {Modal, Tooltip} from 'antd';
 import {Settings} from '../Settings/Settings';
 import {CloseOutlined, PoweroffOutlined, SettingOutlined, StarFilled, StarOutlined} from '@ant-design/icons';
 import {Loader} from '../Loader/Loader';
+import {D1, H1, M5} from '../../constants';
+
+const intervals = [M5, H1, D1];
 
 export const Chart = (props) => {
   const chartRef = useRef();
@@ -14,6 +17,7 @@ export const Chart = (props) => {
   const [acceptVisible, setAcceptVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [chart, setChart] = useState(false);
+  const [currentInterval, setCurrentInterval] = useState(M5);
   const {width, height} = useMemo(() => {
     let width = (state?.width || 400);
     let height = (width - 2) * 0.7 + 32;
@@ -54,6 +58,11 @@ export const Chart = (props) => {
         }
       });
   }, [ticker]);
+
+  const setInterval = (interval) => () => {
+    ticker?.setInterval(interval);
+    setCurrentInterval(interval);
+  };
 
   const addFavorite = () => {
     if (favorite) {
@@ -96,6 +105,15 @@ export const Chart = (props) => {
         <div className={s.header}>
           <div className={s.info}>
             <span title={`5m ${lang?.chart}`} className={s.title}>{symbol}</span>
+            <div className={s.intervals}>{intervals.map((i) => (
+              <span
+                className={i === currentInterval ? s.currentInterval : ''}
+                key={i}
+                onClick={setInterval(i)}
+              >
+                {i}
+              </span>
+            ))}</div>
             {ticker?.averageVolumeAsString ? <Tooltip title={lang?.last5mAverageVolume(last5mCount)}>
               <span>{ticker?.averageVolumeAsString}</span>
             </Tooltip> : null}

@@ -109,6 +109,13 @@ export class Level {
     });
   };
 
+  removeLine = () => {
+    if (this.ticker?.series && this.line) {
+      this.ticker.series.removePriceLine(this.line);
+      this.line = null;
+    }
+  };
+
   destroy = () => {
     if (this.line) this.ticker?.series?.removePriceLine(this.line);
     if (this.price && this.ticker?.levels?.[this.price]) {
