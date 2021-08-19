@@ -1,11 +1,11 @@
 import {OrderBook} from './OrderBook';
 import {createChart as createChartFn} from 'lightweight-charts';
 import {getSymbolChartData, getSymbolChartDataByRange} from '../api';
-import {chartLimit, volumeViewedTimeout} from '../config';
+import {chartLimit, chartRightOffset, intervals, volumeViewedTimeout} from '../config';
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
-import {barPrices, btcusdt, D1, H1, HIGH, LOW, M5} from '../constants';
+import {barPrices, btcusdt, D1, H1, HIGH, intervalDuration, LOW, M5} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
@@ -17,6 +17,16 @@ const methods = {
   onOrderBook: '@depth@1000ms',
   onChart: '@kline_5m',
   onBestPrice: '@bookTicker',
+};
+
+const getChartMethods = (name, methods) => {
+  return intervals.slice(1).reduce((acc, current) => {
+    const method = `onChart${current}`;
+    const stream = `${name.toLowerCase()}@kline_${current}`;
+    acc[current] = {method, stream};
+    methods[stream] = method;
+    return acc;
+  }, {});
 };
 
 export const getShorted = (v) => {
@@ -75,10 +85,14 @@ export class Ticker {
   volumeViewed = false;
   volumeViewedTimeoutId;
   interval = M5;
+  chartMethods;
+  openedHigherIntervalStreams = {};
   subscribedOnVisibleTimeRangeChange;
+  streamRequestId = 0;
 
   constructor(name, state) {
     this.name = name;
+    this.chartMethods = getChartMethods(name, this.method);
     if (state) {
       this.state = state;
     }
@@ -120,7 +134,6 @@ export class Ticker {
         const width = (this.state.width || 400) - 2;
         const height = this.getHeight(width);
         this.chart.resize(width, height);
-        this.setChartOptions();
         callback?.();
       }
     });
@@ -173,6 +186,9 @@ export class Ticker {
               map[candle.time] = candle;
               this.setPrecision(candle);
             });
+            if (data.length < chartLimit[interval]) {
+              array[0].isFirst = true;
+            }
             this.chartData[interval] = {map, array};
             if (interval === M5) {
               this.setChartData();
@@ -226,14 +242,7 @@ export class Ticker {
     delete this.stream;
   };
 
-  // sent = false;
-
   onStreamMessage = (e) => {
-    // if (!this.sent) {
-    //   const id = Date.now();
-    //   this.sent = id;
-    //   this.stream.send(`{"method": "LIST_SUBSCRIPTIONS", "id": ${id}}`);
-    // }
     if (e.data) {
       const data = JSON.parse(e.data);
       if (data.data && data.stream && this.method[data.stream]) {
@@ -249,6 +258,42 @@ export class Ticker {
     console.log(this.name, e);
     this.closeStream();
     setTimeout(this.openStream, 5000);
+  };
+
+  onChart1h = (update) => {
+    this.onHigherIntervalChart(update, H1);
+  };
+
+  onChart1d = (update) => {
+    this.onHigherIntervalChart(update, D1);
+  };
+
+  onHigherIntervalChart = (update, interval) => {
+    if (update?.k?.t) {
+      const time = update.k.t;
+      const {array, map} = this.chartData?.[interval] || {};
+      if (array && map) {
+        let bar;
+        if (map[time]) {
+          bar = map[time];
+          bar.update(update.k);
+        } else {
+          bar = new Bar(update.k);
+          map[time] = bar;
+          array.push(bar);
+        }
+        if (this.series && this.interval === interval) {
+          const {time, open, high, low, close} = bar;
+          this.series.update({
+            time: time / 1000,
+            open,
+            high,
+            low,
+            close,
+          });
+        }
+      }
+    }
   };
 
   onChart = (update) => {
@@ -324,12 +369,6 @@ export class Ticker {
     this.orderBook?.onBestPrice(update);
   };
 
-  // onAggTrade = (update) => {
-  // };
-
-  // onTrade = (update) => {
-  // }
-
   setAverageVolume = () => {
     const data = this.chartData?.[M5]?.array;
     let count = this.config?.last5mCount || 10;
@@ -370,10 +409,46 @@ export class Ticker {
     return volumes;
   };
 
+  addStream = (interval) => {
+    if (this.stream && !this.openedHigherIntervalStreams[interval]) {
+      this.openedHigherIntervalStreams[interval] = true;
+      const id = ++this.streamRequestId;
+      const subscription = {
+        method: 'SUBSCRIBE',
+        params: [this.chartMethods[interval].stream],
+        id
+      }
+      this.stream.send(JSON.stringify(subscription));
+    }
+  };
+
+  removeStream = (interval) => {
+    if (this.stream && this.openedHigherIntervalStreams[interval]) {
+      const id = ++this.streamRequestId;
+      const subscription = {
+        method: 'UNSUBSCRIBE',
+        params: [this.chartMethods[interval].stream],
+        id
+      }
+      this.stream.send(JSON.stringify(subscription));
+      delete this.openedHigherIntervalStreams[interval];
+    }
+  };
+
   setInterval = (interval) => {
     this.interval = interval;
     this.setLevels(interval);
     this.setChartData(interval);
+    if (interval === M5) {
+      this.removeStream(H1);
+      this.removeStream(D1);
+    } else if (interval === H1) {
+      this.removeStream(D1);
+      this.addStream(H1);
+    } else if (interval === D1) {
+      this.removeStream(H1);
+      this.addStream(D1);
+    }
   };
 
   setLevels = (interval) => {
@@ -434,31 +509,30 @@ export class Ticker {
   };
 
   onVisibleTimeRangeChanged = (range) => {
-    const barMap = this.chartData?.[this.interval]?.map;
-    if (range?.from && barMap) {
-      const multiplier = {
-        [M5]: 5 * 60,
-        [H1]: 60 * 60,
-        [D1]: 60 * 60 * 24
-      };
-      const prevBarTime = range.from * 1000 - multiplier[this.interval] * 1000;
-      const prevBar = barMap[prevBarTime];
+    const {array, map} = this.chartData?.[this.interval] || {};
+    if (!array?.[0]?.isFirst && range?.from && map) {
+      const prevBarTime = range.from * 1000 - intervalDuration[this.interval];
+      const prevBar = map[prevBarTime];
       if (!prevBar) {
-        barMap[prevBarTime] = 1; // чтоб на время запроса не генерировались новые запросы
-        getSymbolChartDataByRange(this.name, this.interval, range.from * 1000 - 500 * multiplier[this.interval] * 1000, range.from * 1000)
+        const historyLength = 500;
+        map[prevBarTime] = 1; // чтоб на время запроса не генерировались новые запросы
+        getSymbolChartDataByRange(this.name, this.interval, range.from * 1000 - historyLength * intervalDuration[this.interval], range.from * 1000)
           .then((data) => {
-            delete barMap[prevBarTime];
+            delete map[prevBarTime];
             if (data && this.series) {
               data.forEach((d) => {
                 const bar = new Bar(d, this.interval);
-                barMap[bar.time] = bar
+                map[bar.time] = bar
               });
-              this.chartData[this.interval].array = Object.keys(barMap)
-                .sort((a, b) => barMap[a].time - barMap[b].time)
+              this.chartData[this.interval].array = Object.keys(map)
+                .sort((a, b) => map[a].time - map[b].time)
                 .map((time, i) => {
-                  barMap[time].i = i;
-                  return barMap[time];
+                  map[time].i = i;
+                  return map[time];
                 });
+              if (data.length < historyLength) {
+                this.chartData[this.interval].array[0].isFirst = true;
+              }
               this.series.setData(this.chartData[this.interval].array.map((bar) => ({
                 time: bar.time / 1000,
                 open: bar.open,
@@ -473,30 +547,32 @@ export class Ticker {
     }
   };
 
+  getDefaultVisibleRange = (interval) => {
+    const to = Date.now() / 1000;
+    const currentInterval = (interval && intervalDuration[interval] ? intervalDuration[interval] : intervalDuration[M5]) / 1000;
+    return {from: to - 250 * currentInterval, to};
+  };
+
+  firstTime = {};
+
   setChartOptions = (interval = M5) => {
-    const currentTime = Date.now();
-    const visibleRange = {
-      [M5]: 24,
-      [H1]: 200,
-      [D1]: 24 * 200
-    };
-    if (this.chart && this.series) {
-      this.chart.timeScale().setVisibleRange({
-        from: (currentTime - visibleRange[interval] * 60 * 60 * 1000) / 1000,
-        to: currentTime / 1000
-      });
-      this.chart.applyOptions({
-        timeScale: {
-          rightOffset: 20,
-          timeVisible: true,
-        },
-      });
-      this.series.applyOptions({
-        priceFormat: {
-          precision: this.precision,
-          minMove: this.minMove,
-        },
-      });
+    if (!this.firstTime[interval]) {
+      this.firstTime[interval] = true;
+      if (this.chart && this.series) {
+        this.chart.timeScale().setVisibleRange(this.getDefaultVisibleRange(interval));
+        this.chart.applyOptions({
+          timeScale: {
+            rightOffset: chartRightOffset,
+            timeVisible: true,
+          },
+        });
+        this.series.applyOptions({
+          priceFormat: {
+            precision: this.precision,
+            minMove: this.minMove,
+          },
+        });
+      }
     }
   };
 

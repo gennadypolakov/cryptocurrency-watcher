@@ -11,6 +11,7 @@ import {notification} from 'antd';
 import {blinkChartBorder, EN} from '../constants';
 
 export class State {
+  version = 43;
   apiTimeout;
   banned = {}; //{name: string, checked: boolean}
   config;
@@ -18,7 +19,6 @@ export class State {
   eventTickers;
   events$ = new Subject();
   futures;
-  priceNearLevel = []; //{name: string, checked: boolean}
   spot;
   tickerNames;
   tickers;
@@ -57,6 +57,11 @@ export class State {
   }
 
   constructor(dispatch) {
+    const v = localStorage.getItem('v');
+    if (this.version.toString() !== v) {
+      localStorage.clear();
+      localStorage.setItem('v', this.version.toString());
+    }
     this.dispatch = dispatch;
     this.setLanguage();
   }

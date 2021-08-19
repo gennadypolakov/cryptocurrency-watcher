@@ -13,3 +13,8 @@ export const btcusdt = 'BTCUSDT';
 export const blinkChartBorder = 'blinkChartBorder';
 export const EN = 'en';
 export const RU = 'ru';
+export const intervalDuration = { // one interval duration in ms
+  [M5]: 300000, // 5 * 60 * 1000
+  [H1]: 3600000, // 60 * 60 * 1000
+  [D1]: 86400000 // 60 * 60 * 24 * 1000
+};

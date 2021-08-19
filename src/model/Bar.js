@@ -9,6 +9,7 @@ export class Bar {
   volume;
   takerVolume;
   time;
+  isFirst;
 
   constructor(data, interval) {
     if (interval || Array.isArray(data)) {
