@@ -201,7 +201,7 @@ export class Settings {
         this.dailyDelta = dailyDelta;
         this.save();
       }
-      if (!this.autoScroll) {
+      if (this.autoScroll === undefined) {
         this.autoScroll = autoScroll;
         this.save();
       }
