@@ -85,7 +85,7 @@ export class Order {
       if (this.checkVolume() && this.checkPrice()) {
         if (second) {
           this.createLine();
-          if (!this.ticker?.isTimeout && !this.viewed) {
+          if (this.ticker?.isActive && !this.ticker?.isTimeout && !this.viewed) {
             this.ticker?.state?.events$?.next(this);
           }
         } else {

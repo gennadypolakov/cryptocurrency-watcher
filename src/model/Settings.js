@@ -266,4 +266,13 @@ export class Settings {
     }
   };
 
+  setTickerState(name, isActive) {
+    if (this.tickers?.[name]) {
+      this.tickers[name].isActive = isActive;
+    }
+    if (this.state?.tickers?.[name]) {
+      this.state.tickers[name].isActive = isActive;
+    }
+  }
+
 }

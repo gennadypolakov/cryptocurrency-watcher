@@ -26,14 +26,10 @@ export const Tickers = (props) => {
   const onChange = (name) => (e) => {
     if (name === 'all') {
       tickerNames?.forEach?.((name) => {
-        if (state?.config?.tickers?.[name]) {
-          state.config.tickers[name].isActive = e?.target?.checked;
-        }
+        state.config.setTickerState(name, !!e?.target?.checked);
       });
     } else {
-      if (state?.config?.tickers?.[name]) {
-        state.config.tickers[name].isActive = e?.target?.checked;
-      }
+      state.config.setTickerState(name, !!e?.target?.checked);
     }
     state?.config?.save?.();
     state?.updateTickers();
