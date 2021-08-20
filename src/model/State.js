@@ -1,4 +1,4 @@
-import {getFuturesExchangeInfo, getSpotExchangeInfo} from '../api';
+import {getFuturesExchangeInfo, getManifest, getSpotExchangeInfo} from '../api';
 import {Subject} from 'rxjs';
 import {set} from 'lodash';
 
@@ -7,11 +7,11 @@ import {Settings} from './Settings';
 import {Level} from './Level';
 import {Order} from './Order';
 import {apiTimeout, languages} from '../config';
-import {notification} from 'antd';
+import {Button, notification} from 'antd';
 import {blinkChartBorder, EN} from '../constants';
 
 export class State {
-  version = 43;
+
   apiTimeout;
   banned = {}; //{name: string, checked: boolean}
   config;
@@ -57,13 +57,41 @@ export class State {
   }
 
   constructor(dispatch) {
-    const v = localStorage.getItem('v');
-    if (this.version.toString() !== v) {
-      localStorage.clear();
-      localStorage.setItem('v', this.version.toString());
-    }
+    // const v = localStorage.getItem('v');
+    // if (this.version.toString() !== v) {
+    //   localStorage.clear();
+    //   localStorage.setItem('v', this.version.toString());
+    // }
     this.dispatch = dispatch;
     this.setLanguage();
+    this.setVersion();
+  }
+
+  setVersion() {
+    getManifest()
+      .then((data) => data?.version)
+      .then((v) => {
+        if (this.version && this.version !== v) {
+          this.onNewVersion();
+        }
+        this.version = v;
+      })
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => {
+          this.setVersion();
+        }, 600000);
+      });
+  };
+
+  onNewVersion() {
+    notification.open({
+      message: 'Новая версия приложения',
+      btn: (
+        <Button type="primary" size="small" onClick={() => window.location.reload()}>
+          Обновить
+        </Button>
+      )});
   }
 
   setLanguage = () => {

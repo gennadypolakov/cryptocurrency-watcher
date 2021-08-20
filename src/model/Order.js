@@ -116,7 +116,7 @@ export class Order {
   updateLine = () => {
     if (this.line && this.side && this.volume) {
       this.line?.applyOptions({
-        title: getShorted(this.volume)
+        title: `${getShorted(this.volume)} ($${getShorted(this.volume * this.price)})`
       });
     }
   };
@@ -138,7 +138,7 @@ export class Order {
           axisLabelVisible: true,
           price: this.price,
           lineWidth: 1,
-          title: getShorted(this.volume)
+          title: `${getShorted(this.volume)} ($${getShorted(this.volume * this.price)})`
         });
         this.orderBook.lines[this.side][this.price] = this;
       }

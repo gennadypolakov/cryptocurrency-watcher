@@ -443,11 +443,43 @@ export class Ticker {
       this.removeStream(H1);
       this.removeStream(D1);
     } else if (interval === H1) {
+      this.setLastChartData(interval);
       this.removeStream(D1);
       this.addStream(H1);
     } else if (interval === D1) {
+      this.setLastChartData(interval);
       this.removeStream(H1);
       this.addStream(D1);
+    }
+  };
+
+  setLastChartData = (interval) => {
+    const chartData = this.chartData?.[interval] || {};
+    const {array, map} = chartData;
+    if (array && map) {
+      const lastBar = array[array.length - 1];
+      getSymbolChartDataByRange(this.name, interval, lastBar.time)
+        .then((data) => {
+          if (data) {
+            data.forEach((d, i) => {
+              if (i === 0) {
+                lastBar.create(d);
+              } else {
+                const bar = new Bar(d, interval);
+                map[bar.time] = bar;
+                array.push(bar);
+              }
+            });
+            this.series?.setData(array.map((bar) => ({
+              time: bar.time / 1000,
+              open: bar.open,
+              high: bar.high,
+              low: bar.low,
+              close: bar.close,
+            })));
+          }
+        })
+        .catch(() => {});
     }
   };
 
