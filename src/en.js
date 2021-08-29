@@ -18,6 +18,7 @@ export const translation = {
   settings: 'Settings',
   notifications: 'Notifications',
   disableNotifications: 'Disable notifications',
+  removeNotifications: 'Remove from notification list',
   highVolume: 'High volume',
   limitOrder: 'Limit order',
 

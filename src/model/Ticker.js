@@ -1,5 +1,5 @@
 import {OrderBook} from './OrderBook';
-import {createChart as createChartFn} from 'lightweight-charts';
+import {createChart as createChartFn, CrosshairMode} from 'lightweight-charts';
 import {getSymbolChartData, getSymbolChartDataByRange} from '../api';
 import {chartLimit, chartRightOffset, intervals, volumeViewedTimeout} from '../config';
 import {Bar} from './Bar';
@@ -90,6 +90,7 @@ export class Ticker {
   openedHigherIntervalStreams = {};
   subscribedOnVisibleTimeRangeChange;
   streamRequestId = 0;
+  streamOpened = false;
 
   constructor(name, state) {
     this.name = name;
@@ -118,6 +119,7 @@ export class Ticker {
       const width = (this.state.width || 400) - 2;
       const height = this.getHeight(width);
       this.chart = createChartFn(this.chartElement, {width, height});
+      this.chart.applyOptions({crosshair: {mode: CrosshairMode.Normal}});
     }
     if (!this.series && this.chart) {
       this.series = this.chart.addCandlestickSeries();
@@ -228,7 +230,8 @@ export class Ticker {
         //   streamNames.push('wavesusdt@trade');
         // }
         this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
-        this.stream.addEventListener('message', this.onStreamMessage);
+        this.stream.addEventListener('open', this.onOpenStream);
+        this.stream.addEventListener('error', this.onStreamError);
         this.stream.addEventListener('error', this.onStreamError);
       } catch (e) {
         this.onStreamError(e);
@@ -239,8 +242,13 @@ export class Ticker {
   closeStream = () => {
     this.stream?.removeEventListener('message', this.onStreamMessage);
     this.stream?.removeEventListener('error', this.onStreamError);
+    this.stream?.removeEventListener('open', this.onOpenStream);
     this.stream?.close();
     delete this.stream;
+  };
+
+  onOpenStream = (e) => {
+    this.streamOpened = true;
   };
 
   onStreamMessage = (e) => {
@@ -416,7 +424,7 @@ export class Ticker {
   };
 
   addStream = (interval) => {
-    if (this.stream && !this.openedHigherIntervalStreams[interval]) {
+    if (this.stream && this.streamOpened && !this.openedHigherIntervalStreams[interval]) {
       this.openedHigherIntervalStreams[interval] = true;
       const id = ++this.streamRequestId;
       this.stream.send(JSON.stringify({
@@ -428,7 +436,7 @@ export class Ticker {
   };
 
   removeStream = (interval) => {
-    if (this.stream && this.openedHigherIntervalStreams[interval]) {
+    if (this.stream && this.streamOpened && this.openedHigherIntervalStreams[interval]) {
       const id = ++this.streamRequestId;
       this.stream.send(JSON.stringify({
         method: 'UNSUBSCRIBE',

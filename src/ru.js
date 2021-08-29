@@ -18,6 +18,7 @@ export const translation = {
   settings: 'Настройки',
   notifications: 'Уведомления',
   disableNotifications: 'Отключить уведомления',
+  removeNotifications: 'Удалить уведомление',
   highVolume: 'Повышенный объем',
   limitOrder: 'Лимитный ордер',
 

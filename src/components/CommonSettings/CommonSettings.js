@@ -1,12 +1,12 @@
 import {useState} from 'react';
-import {CaretRightFilled, CloseOutlined, ExclamationCircleOutlined, PauseOutlined, SettingOutlined} from '@ant-design/icons';
-import {Badge, Card, Modal} from 'antd';
+import {CaretRightFilled, ExclamationCircleOutlined, PauseOutlined, SettingOutlined} from '@ant-design/icons';
+import {Badge, Modal} from 'antd';
 import {Tabs} from 'antd';
 
 import {Settings} from '../Settings/Settings';
 import {Tickers} from '../Tickers/Tickers';
 import s from './CommonSettings.module.scss';
-import {getShorted} from '../../model/Ticker';
+import {TickerNotifications} from '../TickerNotifications/TickerNotifications';
 
 const {TabPane} = Tabs;
 
@@ -39,54 +39,6 @@ export const CommonSettings = (props) => {
     state?.removeViewedEvent(ticker);
     setEventsVisible(false);
   }
-
-  const disableNotifications = (ticker) => () => {
-    if (state.events?.[ticker]) {
-      delete state.events[ticker];
-    }
-    state.tickers?.[ticker]?.enableTimeout();
-    state.dispatch?.(state);
-  };
-
-  const getLevels = (ticker) => {
-    if (state.events[ticker]?.level) {
-      const levelMap = state.events[ticker].level;
-      const levels = Object.keys(levelMap).map((price) => levelMap[price]);
-      return levels.map((level) => <div key={`l${level.price}`}>{lang?.level}: {lang?.price} {level.price}, {lang?.interval} {level.interval}</div>)
-    }
-    return null;
-  };
-
-  const getOrders = (ticker) => {
-    if (state.events[ticker]?.order) {
-      const orderMap = state.events[ticker].order;
-      const orders = Object.keys(orderMap)
-        .sort((a, b) => b - a)
-        .map((price) => orderMap[price])
-        .filter((o) => o.volume);
-      return orders.map((order) => <div key={`o${order.price}`}>{lang?.limitOrder}: {lang?.price} {order.price}, {lang?.volume} {getShorted(order.volume)}</div>)
-    }
-    return null;
-  };
-
-  const getVolume = (ticker) => {
-    if (state.events[ticker]?.volume?.highVolume) {
-      const volume = state.events[ticker]?.volume?.highVolume;
-      return <div>{lang?.highVolume}: {getShorted(volume)}</div>;
-    }
-    return null;
-  };
-
-  const cards = tickers.map((ticker) => {
-    const levels = getLevels(ticker);
-    const orders = getOrders(ticker);
-    const volume = getVolume(ticker);
-    if (!levels && !orders && !volume) {
-      state?.removeViewedEvent(ticker);
-      return null;
-    }
-    return {ticker, levels, orders, volume};
-  }).filter((card) => !!card);
 
   return <>
     <div className={s.settings}>
@@ -129,22 +81,13 @@ export const CommonSettings = (props) => {
       footer={null}
       width={800}
     >
-      {cards.map(({ticker, levels, orders, volume}) => (
-        <Card
-          className={s.card}
-          extra={<div className={s.controls}>
-            <CloseOutlined onClick={disableNotifications(ticker)} title={lang?.disableNotifications} />
-          </div>}
-          key={ticker}
-          onClick={scrollTo(ticker)}
-          size="small"
-          title={ticker}
-        >
-          {levels}
-          {orders}
-          {volume}
-        </Card>
-      ))}
+      {tickers.map((ticker) => <TickerNotifications
+        key={ticker}
+        state={state}
+        name={ticker}
+        lang={lang}
+        scrollTo={scrollTo(ticker)}
+      />)}
     </Modal>
   </>;
 };
