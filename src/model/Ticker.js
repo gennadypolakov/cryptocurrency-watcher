@@ -231,7 +231,7 @@ export class Ticker {
         // }
         this.stream = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streamNames.join('/')}`);
         this.stream.addEventListener('open', this.onOpenStream);
-        this.stream.addEventListener('error', this.onStreamError);
+        this.stream.addEventListener('message', this.onStreamMessage);
         this.stream.addEventListener('error', this.onStreamError);
       } catch (e) {
         this.onStreamError(e);
@@ -247,7 +247,7 @@ export class Ticker {
     delete this.stream;
   };
 
-  onOpenStream = (e) => {
+  onOpenStream = () => {
     this.streamOpened = true;
   };
 

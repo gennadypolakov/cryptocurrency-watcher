@@ -33,7 +33,7 @@ export class OrderBook {
 
   onConfig = () => {
     this.checkId = Symbol();
-    const priceDistance = this.ticker?.config?.priceDistance;
+    const priceDistance = this.ticker?.config?.orderPriceDistance;
     if (priceDistance) {
       this.checkOrders(ASK, priceDistance);
       this.checkOrders(BID, priceDistance);

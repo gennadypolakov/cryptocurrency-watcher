@@ -12,39 +12,39 @@ export const TickerNotifications = (props) => {
 
   const disableNotifications = (e) => {
     e.stopPropagation();
-    if (state.events?.[name]) {
-      delete state.events[name];
-    }
     state.tickers?.[name]?.enableTimeout();
-    state.dispatch?.(state);
+    state?.removeViewedEvent(name);
   };
 
   const removeNotifications = (e) => {
     e.stopPropagation();
-    if (state.events?.[name]) {
-      delete state.events[name];
-    }
-    state.dispatch?.(state);
+    state?.removeViewedEvent(name);
   };
 
   const Levels = useCallback(() => {
     if (levelNotifications && tickerEvents?.level) {
-      return Object.keys(tickerEvents.level).map((price) => {
-        const level = tickerEvents.level[price];
-        return <div key={`l${level.price}`}>{lang?.level}: {lang?.price} {level.price}, {lang?.interval} {level.interval}</div>;
-      });
+      const prices = Object.keys(tickerEvents.level);
+      if (prices.length) {
+        return prices.map((price) => {
+          const level = tickerEvents.level[price];
+          return <div key={`l${level.price}`}>{lang?.level}: {lang?.price} {level.price}, {lang?.interval} {level.interval}</div>;
+        });
+      }
     }
     return null;
   }, [lang, levelNotifications, tickerEvents.level]);
 
   const Orders = useCallback(() => {
     if (orderNotifications && tickerEvents?.order) {
-      return Object.keys(tickerEvents.order)
-        .map((price) => Number(price))
-        .sort((a, b) => b - a)
-        .map((price) => tickerEvents.order[price])
-        .filter((o) => o.volume)
-        .map((order) => <div key={`o${order.price}`}>{lang?.limitOrder}: {lang?.price} {order.price}, {lang?.volume} {getShorted(order.volume)}</div>)
+      const prices = Object.keys(tickerEvents.order);
+      if (prices.length) {
+        return prices
+          .map((price) => Number(price))
+          .sort((a, b) => b - a)
+          .map((price) => tickerEvents.order[price])
+          .filter((o) => o.volume)
+          .map((order) => <div key={`o${order.price}`}>{lang?.limitOrder}: {lang?.price} {order.price}, {lang?.volume} {getShorted(order.volume)}</div>)
+      }
     }
     return null;
   }, [lang, orderNotifications, tickerEvents.order]);
