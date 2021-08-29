@@ -13,7 +13,7 @@ export const lineWidths = {
   [M5]: 1,
   [H1]: 1,
   [H4]: 2,
-  [D1]: 2
+  [D1]: 3
 };
 export const chartLimit = {
   [M5]: 1000,

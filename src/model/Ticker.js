@@ -500,35 +500,33 @@ export class Ticker {
 
   setLevels = (interval) => {
     if (this.levels && Object.keys(this.levels).length) {
-      if (interval === M5) {
-        Object.keys(this.levels).forEach((price) => {
-          if (!this.levels[price].line) {
-            this.levels[price].createLine();
-          }
-        });
-      } else if (interval === H1) {
-        Object.keys(this.levels).forEach((price) => {
-          if (!this.levels[price].line) {
-            this.levels[price].createLine();
-          }
+      if (interval === M5 || interval === H1) {
+        Object.keys(this.levels).forEach((interval) => {
+          Object.keys(this.levels[interval]).forEach((price) => {
+            if (!this.levels[interval][price].line) {
+              this.levels[interval][price].createLine();
+            }
+          });
         });
       } else if (interval === H4) {
-        Object.keys(this.levels).forEach((price) => {
-          if (this.levels[price].line) {
-            if (this.levels[price].interval === H1) {
-              this.levels[price].removeLine();
+        Object.keys(this.levels).forEach((interval) => {
+          Object.keys(this.levels[interval]).forEach((price) => {
+            if (interval === H1) {
+              this.levels[H1]?.[price]?.removeLine();
+            } else if  (!this.levels[interval][price].line) {
+              this.levels[interval][price].createLine();
             }
-          } else {
-            if ((this.levels[price].interval === H4 || this.levels[price].interval === D1) && !this.levels[price].line) {
-              this.levels[price].createLine();
-            }
-          }
+          });
         });
       } else if (interval === D1) {
-        Object.keys(this.levels).forEach((price) => {
-          if ((this.levels[price].interval === H1 || this.levels[price].interval === H4) && this.levels[price].line) {
-            this.levels[price].removeLine();
-          }
+        Object.keys(this.levels).forEach((interval) => {
+          Object.keys(this.levels[interval]).forEach((price) => {
+            if (interval === H1 || interval === H4) {
+              this.levels[interval]?.[price]?.removeLine();
+            } else if  (!this.levels[interval][price].line) {
+              this.levels[interval][price].createLine();
+            }
+          });
         });
       }
     }
@@ -643,12 +641,14 @@ export class Ticker {
       ) || force
     ) {
       this.minLevelAge = this.config.minLevelAge;
-      Object.keys(this.levels).forEach((price) => {
-        this.levels[price].destroy();
+      Object.keys(this.levels).forEach((interval) => {
+        Object.keys(this.levels[interval]).forEach((price) => {
+          this.levels[interval][price].destroy();
+        });
       });
-      this.setExtremes(H1);
-      this.setExtremes(H4);
       this.setExtremes(D1);
+      this.setExtremes(H4);
+      this.setExtremes(H1);
     }
   };
 
@@ -711,24 +711,42 @@ export class Ticker {
           }
         }
       }
-      highs.forEach((high) => {
+      for (let i = highs.length - 1; i >= 0; i--) {
         new Level({
           interval,
-          price: high.price,
+          price: highs[i].price,
           side: HIGH,
           ticker: this,
-          time: high.time,
+          time: highs[i].time,
         });
-      });
-      lows.forEach((low) => {
+      }
+      // highs.forEach((high) => {
+      //   new Level({
+      //     interval,
+      //     price: high.price,
+      //     side: HIGH,
+      //     ticker: this,
+      //     time: high.time,
+      //   });
+      // });
+      for (let i = lows.length - 1; i >= 0; i--) {
         new Level({
           interval,
-          price: low.price,
+          price: lows[i].price,
           side: LOW,
           ticker: this,
-          time: low.time,
+          time: lows[i].time,
         });
-      });
+      }
+      // lows.forEach((low) => {
+      //   new Level({
+      //     interval,
+      //     price: low.price,
+      //     side: LOW,
+      //     ticker: this,
+      //     time: low.time,
+      //   });
+      // });
     }
   };
 

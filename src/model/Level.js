@@ -1,6 +1,19 @@
-import {CROSSED_LEVEL_COLOR, D1, H1, HIGH, LEVEL_COLOR, M5} from '../constants';
+import {CROSSED_LEVEL_COLOR, D1, H1, H4, HIGH, LEVEL_COLOR, M5} from '../constants';
 import {lineWidths, priceLine} from '../config';
 import {LineStyle} from 'lightweight-charts';
+import {set} from 'lodash';
+
+const intervalCondition = (levels, interval, price) => {
+  const condition = {
+    [D1]: () => !levels?.[D1]?.[price],
+    [H4]: () => !levels?.[D1]?.[price] && !levels?.[H4]?.[price],
+    [H1]: () => !levels?.[D1]?.[price] && !levels?.[H4]?.[price] && !levels?.[H1]?.[price],
+  };
+  if (levels && interval && price) {
+    return condition[interval]();
+  }
+  return false;
+};
 
 export class Level {
 
@@ -25,10 +38,10 @@ export class Level {
     this.ticker = ticker;
     this.time = time || Date.now();
 
-    if (this.interval === M5) {
+    if (this.interval === M5 || intervalCondition(this.ticker?.levels, this.interval, this.price)) {
       this.setLevel();
-    } else {
-      this.checkLevelOnPrice();
+    // } else {
+    //   this.checkLevelOnPrice();
     }
   }
 
@@ -120,8 +133,8 @@ export class Level {
 
   destroy = () => {
     if (this.line) this.ticker?.series?.removePriceLine(this.line);
-    if (this.price && this.ticker?.levels?.[this.price]) {
-      delete this.ticker.levels[this.price];
+    if (this.price && this.interval && this.ticker?.levels?.[this.interval]?.[this.price]) {
+      delete this.ticker.levels[this.interval][this.price];
       this.ticker.state?.removeEvent(this.ticker.name, 'level', this.price);
     }
     this.priceSubscription?.unsubscribe();
@@ -135,8 +148,8 @@ export class Level {
 
   setLevel = () => {
     this.createLine();
-    if (this.price && this.ticker?.levels) {
-      this.ticker.levels[this.price] = this;
+    if (this.price && this.interval && this.ticker?.levels) {
+      set(this.ticker.levels, [this.interval, this.price], this);
     }
     if (this.ticker.price$) {
       this.priceSubscription = this.ticker.price$.subscribe(this.onPrice);

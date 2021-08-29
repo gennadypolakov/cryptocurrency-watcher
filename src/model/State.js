@@ -99,7 +99,7 @@ export class State {
     if (navigator.language && languages[navigator.language]) {
       this.lang = languages[navigator.language];
     }
-    import(`../${this.lang}`).then((module) => {
+    import(`../lang/${this.lang}`).then((module) => {
       if (module.translation) {
         this.translation = module.translation;
         this.dispatch(this);
