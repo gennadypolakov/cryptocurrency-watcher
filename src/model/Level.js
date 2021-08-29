@@ -99,10 +99,12 @@ export class Level {
   };
 
   createLine = () => {
+    const color = this.isActual ? LEVEL_COLOR : CROSSED_LEVEL_COLOR;
+    const lineStyle = this.interval === M5 || !this.isActual ? LineStyle.Dashed : LineStyle.Solid;
     this.line = this.ticker?.series?.createPriceLine({
       ...priceLine,
-      color: LEVEL_COLOR,
-      lineStyle: this.interval === M5 ? LineStyle.Dashed : LineStyle.Solid,
+      color,
+      lineStyle,
       axisLabelVisible: true,
       price: this.price,
       lineWidth: lineWidths[this.interval] || 1

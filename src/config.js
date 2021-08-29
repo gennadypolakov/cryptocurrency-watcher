@@ -1,5 +1,5 @@
 import {LineStyle} from 'lightweight-charts';
-import {D1, EN, H1, M5, RU} from './constants';
+import {D1, EN, H1, H4, M5, RU} from './constants';
 
 export const priceLine = {
   price: 0,
@@ -8,15 +8,17 @@ export const priceLine = {
   lineStyle: LineStyle.Solid,
   axisLabelVisible: true
 };
-export const intervals = [M5, H1, D1];
+export const intervals = [M5, H1, H4, D1];
 export const lineWidths = {
   [M5]: 1,
   [H1]: 1,
+  [H4]: 2,
   [D1]: 2
 };
 export const chartLimit = {
   [M5]: 1000,
   [H1]: 500,
+  [H4]: 500,
   [D1]: 500
 };
 
@@ -41,8 +43,9 @@ export const apiTimeout = 2; // таймаут запросов при бане 
 export const columnCount = 2; // количество графиков по ширине
 export const averageVolumeMultiplier = 2; // множитель среднего объема
 export const volumeViewedTimeout = 30; // таймаут уведомлений о повышенном объеме
-export const dailyDelta = 15; // минимальное расстояние в количестве интервалов для вычисления дневных уровней
-export const hourlyDelta = 15; // минимальное расстояние в количестве интервалов для вычисления дневных уровней
+export const hourlyDelta = 15; // минимальное количество чосовых свечей между часовыми уровнями
+export const fourHoursDelta = 15; // минимальное количество 4-х чосовых свечей между 4-х часовыми уровнями
+export const dailyDelta = 15; // минимальное количество дневных свечей между дневными уровнями
 export const autoScroll = true; // автопереход к событию
 export const autoScrollTimeout = 10; // автопереход к событию
 export const language = EN;

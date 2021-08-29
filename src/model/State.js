@@ -145,7 +145,6 @@ export class State {
         if (!this.spot) {
           this.getSpot();
         }
-        this.setNotification();
         this.events$.subscribe(this.onEvent);
       }
     }

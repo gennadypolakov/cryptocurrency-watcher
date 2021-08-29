@@ -172,6 +172,16 @@ export const Settings = (props) => {
             }
           />
         </Form.Item>
+        <Form.Item name="fourHoursDelta">
+          <Input
+            addonBefore={lang?.fourHoursDelta}
+            suffix={
+              <Tooltip title={lang?.fourHoursDeltaDesc}>
+                <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+              </Tooltip>
+            }
+          />
+        </Form.Item>
         <Form.Item name="dailyDelta">
           <Input
             addonBefore={lang?.dailyDelta}

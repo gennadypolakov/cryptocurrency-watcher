@@ -5,12 +5,13 @@ import {chartLimit, chartRightOffset, intervals, volumeViewedTimeout} from '../c
 import {Bar} from './Bar';
 import {Settings} from './Settings';
 import {Subject} from 'rxjs';
-import {barPrices, btcusdt, D1, H1, HIGH, intervalDuration, LOW, M5} from '../constants';
+import {barPrices, btcusdt, D1, H1, H4, HIGH, intervalDuration, LOW, M5} from '../constants';
 import {Level} from './Level';
 
 const nextInterval = {
   [M5]: H1,
-  [H1]: D1
+  [H1]: H4,
+  [H4]: D1
 };
 
 const methods = {
@@ -264,6 +265,10 @@ export class Ticker {
     this.onHigherIntervalChart(update, H1);
   };
 
+  onChart4h = (update) => {
+    this.onHigherIntervalChart(update, H4);
+  };
+
   onChart1d = (update) => {
     this.onHigherIntervalChart(update, D1);
   };
@@ -413,24 +418,22 @@ export class Ticker {
     if (this.stream && !this.openedHigherIntervalStreams[interval]) {
       this.openedHigherIntervalStreams[interval] = true;
       const id = ++this.streamRequestId;
-      const subscription = {
+      this.stream.send(JSON.stringify({
         method: 'SUBSCRIBE',
         params: [this.chartMethods[interval].stream],
         id
-      }
-      this.stream.send(JSON.stringify(subscription));
+      }));
     }
   };
 
   removeStream = (interval) => {
     if (this.stream && this.openedHigherIntervalStreams[interval]) {
       const id = ++this.streamRequestId;
-      const subscription = {
+      this.stream.send(JSON.stringify({
         method: 'UNSUBSCRIBE',
         params: [this.chartMethods[interval].stream],
         id
-      }
-      this.stream.send(JSON.stringify(subscription));
+      }));
       delete this.openedHigherIntervalStreams[interval];
     }
   };
@@ -441,14 +444,17 @@ export class Ticker {
     this.setChartData(interval);
     if (interval === M5) {
       this.removeStream(H1);
+      this.removeStream(H4);
       this.removeStream(D1);
     } else if (interval === H1) {
       this.setLastChartData(interval);
+      this.removeStream(H4);
       this.removeStream(D1);
       this.addStream(H1);
     } else if (interval === D1) {
       this.setLastChartData(interval);
       this.removeStream(H1);
+      this.removeStream(H4);
       this.addStream(D1);
     }
   };
@@ -497,9 +503,21 @@ export class Ticker {
             this.levels[price].createLine();
           }
         });
+      } else if (interval === H4) {
+        Object.keys(this.levels).forEach((price) => {
+          if (this.levels[price].line) {
+            if (this.levels[price].interval === H1) {
+              this.levels[price].removeLine();
+            }
+          } else {
+            if ((this.levels[price].interval === H4 || this.levels[price].interval === D1) && !this.levels[price].line) {
+              this.levels[price].createLine();
+            }
+          }
+        });
       } else if (interval === D1) {
         Object.keys(this.levels).forEach((price) => {
-          if (this.levels[price].interval === H1 && this.levels[price].line) {
+          if ((this.levels[price].interval === H1 || this.levels[price].interval === H4) && this.levels[price].line) {
             this.levels[price].removeLine();
           }
         });
@@ -620,6 +638,7 @@ export class Ticker {
         this.levels[price].destroy();
       });
       this.setExtremes(H1);
+      this.setExtremes(H4);
       this.setExtremes(D1);
     }
   };
@@ -627,6 +646,7 @@ export class Ticker {
   setExtremes = (interval) => {
     const intervalDelta = {
       [H1]: this.config.hourlyDelta,
+      [H4]: this.config.fourHoursDelta,
       [D1]: this.config.dailyDelta
     };
     const indexDelta = intervalDelta[interval];

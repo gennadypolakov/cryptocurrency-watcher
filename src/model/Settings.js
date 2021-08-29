@@ -3,7 +3,10 @@ import {
   autoScrollTimeout,
   averageVolumeMultiplier,
   checkedTimout,
-  columnCount, dailyDelta, hourlyDelta,
+  columnCount,
+  dailyDelta,
+  fourHoursDelta,
+  hourlyDelta,
   last5mCount,
   minLevelAge,
   minOrderPercentage,
@@ -21,8 +24,9 @@ export const defaultConfig = {
   averageVolumeMultiplier,
   checkedTimout,
   columnCount,
-  dailyDelta,
   hourlyDelta,
+  fourHoursDelta,
+  dailyDelta,
   last5mCount,
   minLevelAge,
   minOrderPercentage,
@@ -135,18 +139,25 @@ export class Settings {
     this.map.removeTimeout = v;
   };
 
-  get dailyDelta() {
-    return this.map.dailyDelta;
-  };
-  set dailyDelta(v){
-    this.map.dailyDelta = v;
-  };
-
   get hourlyDelta() {
     return this.map.hourlyDelta;
   };
   set hourlyDelta(v){
     this.map.hourlyDelta = v;
+  };
+
+  get fourHoursDelta() {
+    return this.map.fourHoursDelta;
+  };
+  set fourHoursDelta(v){
+    this.map.fourHoursDelta = v;
+  };
+
+  get dailyDelta() {
+    return this.map.dailyDelta;
+  };
+  set dailyDelta(v){
+    this.map.dailyDelta = v;
   };
 
 
@@ -195,6 +206,10 @@ export class Settings {
       }
       if (!this.hourlyDelta) {
         this.hourlyDelta = hourlyDelta;
+        this.save();
+      }
+      if (!this.fourHoursDelta) {
+        this.fourHoursDelta = fourHoursDelta;
         this.save();
       }
       if (!this.dailyDelta) {

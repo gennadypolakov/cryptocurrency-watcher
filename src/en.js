@@ -31,6 +31,8 @@ export const translation = {
   minLevelAgeDesc: 'Do not notify about the approach of prices to levels below the specified age in hours (possibly a fractional value through a dot)',
   hourlyDelta: 'Distance between hour levels',
   hourlyDeltaDesc: 'Minimum number of hours between two levels',
+  fourHoursDelta: 'Distance between four hours levels',
+  fourHoursDeltaDesc: 'Minimum number of four hours between two levels',
   dailyDelta: 'Distance between day levels',
   dailyDeltaDesc: 'Minimum number of days between two levels',
   minOrderPercentage: 'Limit order size',
