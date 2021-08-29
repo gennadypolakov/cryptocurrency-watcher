@@ -64,7 +64,7 @@ export const CommonSettings = (props) => {
         .sort((a, b) => b - a)
         .map((price) => orderMap[price])
         .filter((o) => o.volume);
-      return orders.map((order) => <div key={`o${order.price}`}>{lang?.limitOrder}: {lang?.price} {order.price}, {lang?.volume} {order.volume}</div>)
+      return orders.map((order) => <div key={`o${order.price}`}>{lang?.limitOrder}: {lang?.price} {order.price}, {lang?.volume} {getShorted(order.volume)}</div>)
     }
     return null;
   };

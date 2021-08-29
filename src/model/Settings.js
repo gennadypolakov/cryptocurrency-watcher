@@ -11,10 +11,14 @@ import {
   minLevelAge,
   minOrderPercentage,
   notificationTimeout,
+  orderPriceDistance,
   orderTimeout,
   priceDistance,
   removeOrderPercentage,
   removeTimeout,
+  levelNotifications,
+  orderNotifications,
+  highVolumeNotifications
 } from '../config';
 import {Subject} from 'rxjs';
 
@@ -24,13 +28,17 @@ export const defaultConfig = {
   averageVolumeMultiplier,
   checkedTimout,
   columnCount,
-  hourlyDelta,
-  fourHoursDelta,
   dailyDelta,
+  fourHoursDelta,
+  highVolumeNotifications,
+  hourlyDelta,
   last5mCount,
+  levelNotifications,
   minLevelAge,
   minOrderPercentage,
   notificationTimeout,
+  orderNotifications,
+  orderPriceDistance,
   orderTimeout,
   priceDistance,
   removeOrderPercentage,
@@ -125,6 +133,13 @@ export class Settings {
     this.map.priceDistance = v;
   };
 
+  get orderPriceDistance() {
+    return this.map.orderPriceDistance;
+  };
+  set orderPriceDistance(v){
+    this.map.orderPriceDistance = v;
+  };
+
   get removeOrderPercentage() {
     return this.map.removeOrderPercentage;
   };
@@ -158,6 +173,27 @@ export class Settings {
   };
   set dailyDelta(v){
     this.map.dailyDelta = v;
+  };
+
+  get levelNotifications() {
+    return this.map.levelNotifications;
+  };
+  set levelNotifications(v){
+    this.map.levelNotifications = v;
+  };
+
+  get orderNotifications() {
+    return this.map.orderNotifications;
+  };
+  set orderNotifications(v){
+    this.map.orderNotifications = v;
+  };
+
+  get highVolumeNotifications() {
+    return this.map.highVolumeNotifications;
+  };
+  set highVolumeNotifications(v){
+    this.map.highVolumeNotifications = v;
   };
 
 
@@ -222,6 +258,22 @@ export class Settings {
       }
       if (!this.autoScrollTimeout) {
         this.autoScrollTimeout = autoScrollTimeout;
+        this.save();
+      }
+      if (this.orderPriceDistance === undefined) {
+        this.orderPriceDistance = orderPriceDistance;
+        this.save();
+      }
+      if (this.levelNotifications === undefined) {
+        this.levelNotifications = levelNotifications;
+        this.save();
+      }
+      if (this.orderNotifications === undefined) {
+        this.orderNotifications = orderNotifications;
+        this.save();
+      }
+      if (this.highVolumeNotifications === undefined) {
+        this.highVolumeNotifications = highVolumeNotifications;
         this.save();
       }
     } else if (ticker) {

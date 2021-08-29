@@ -5,26 +5,25 @@ import {getShorted} from './Ticker';
 
 export class Order {
 
-  id;
   bestPrice;
+  checkId;
+  id;
   line;
   orderBook;
   price;
   removeTimeoutId;
-  ticker;
-  timeoutId;
-  updatedAt;
-  volume;
   side; // ask | bid
-  checkId;
+  ticker;
+  time;
+  timeoutId;
   viewed;
+  volume;
 
   constructor(side, price, volume, orderBook) {
     this.orderBook = orderBook;
     this.price = price;
     this.side = side;
     this.ticker = this.orderBook.ticker;
-    this.updatedAt = Date.now();
     this.volume = volume;
     this.check();
   }
@@ -59,7 +58,7 @@ export class Order {
       if (delta < 0) {
         this.remove();
       } else {
-        const priceDistance = this.ticker?.config?.priceDistance || 0;
+        const priceDistance = this.ticker?.config?.orderPriceDistance || 0;
         if (delta / bestPrice <= priceDistance) {
           return true;
         }
@@ -74,25 +73,29 @@ export class Order {
       if (averageVolume && config) {
         const {minOrderPercentage = 2} = config;
         if (this.volume >= averageVolume * minOrderPercentage) {
+          if (!this.time) {
+            this.time = Date.now();
+          }
           return true;
+        } else {
+          this.time = 0;
         }
       }
     }
     return false;
   };
 
-  check = (second = false) => {
+  check = () => {
       if (this.checkVolume() && this.checkPrice()) {
-        if (second) {
+        const timeout = (this.ticker?.config?.orderTimeout || 0) * 60 * 1000;
+        if (this.time + timeout < Date.now()) {
           this.createLine();
-          if (this.ticker?.isActive && !this.ticker?.isTimeout && !this.viewed) {
+          if (this.ticker?.config?.orderNotifications && this.ticker?.isActive && !this.ticker?.isTimeout && !this.viewed) {
             this.ticker?.state?.events$?.next(this);
           }
         } else {
           this.updateLine();
-          this.timeoutId = setTimeout(() => {
-            this.check(true);
-          }, (this.ticker?.config?.orderTimeout || 0) * 60 * 1000);
+          this.timeoutId = setTimeout(this.check, timeout);
         }
       } else {
         this.removeLine();

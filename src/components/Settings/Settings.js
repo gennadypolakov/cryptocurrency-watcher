@@ -56,10 +56,14 @@ export const Settings = (props) => {
   useEffect(() => {
     if (tickerConfig) {
       const newConfig = {...tickerConfig};
+      newConfig.priceDistance = newConfig.priceDistance * 100;
+      newConfig.orderPriceDistance = newConfig.orderPriceDistance * 100;
       formRef.current?.setFieldsValue(newConfig);
       setConfig(newConfig);
     } else if (state?.config?.map) {
       const newConfig = {...state.config.map};
+      newConfig.priceDistance = newConfig.priceDistance * 100;
+      newConfig.orderPriceDistance = newConfig.orderPriceDistance * 100;
       formRef.current?.setFieldsValue(newConfig);
       setConfig(newConfig);
       setAutoScroll(state.config.autoScroll)
@@ -69,7 +73,11 @@ export const Settings = (props) => {
   const onFinish = (values) => {
     const newConfig = {};
     Object.keys(values).forEach((name) => {
-      newConfig[name] = Number(values[name]);
+      if (name === 'priceDistance' || name === 'orderPriceDistance') {
+        newConfig[name] = Number(values[name]) / 100;
+      } else {
+        newConfig[name] = Number(values[name]);
+      }
     });
     if (name && state?.tickers?.[name]?.config) {
       state.tickers[name].config.update(newConfig);
@@ -142,6 +150,9 @@ export const Settings = (props) => {
             </Radio.Group>
           </Form.Item>
           : null}
+        <Form.Item label={lang?.levelNotifications} name="levelNotifications" valuePropName="checked">
+          <Switch/>
+        </Form.Item>
         <Form.Item name="priceDistance">
           <Input
             addonBefore={lang?.priceDistance}
@@ -192,6 +203,19 @@ export const Settings = (props) => {
             }
           />
         </Form.Item>
+        <Form.Item label={lang?.orderNotifications} name="orderNotifications" valuePropName="checked">
+          <Switch/>
+        </Form.Item>
+        <Form.Item name="orderPriceDistance">
+          <Input
+            addonBefore={lang?.orderPriceDistance}
+            suffix={
+              <Tooltip title={lang?.orderPriceDistanceDesc}>
+                <InfoCircleOutlined style={{color: 'rgba(0,0,0,.45)'}}/>
+              </Tooltip>
+            }
+          />
+        </Form.Item>
         <Form.Item name="minOrderPercentage">
           <Input
             addonBefore={lang?.minOrderPercentage}
@@ -221,6 +245,9 @@ export const Settings = (props) => {
               </Tooltip>
             }
           />
+        </Form.Item>
+        <Form.Item label={lang?.highVolumeNotifications} name="highVolumeNotifications" valuePropName="checked">
+          <Switch/>
         </Form.Item>
         <Form.Item name="averageVolumeMultiplier">
           <Input

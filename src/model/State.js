@@ -39,6 +39,7 @@ export class State {
   width;
 
   dispatch;
+  version;
 
   btcHighVolume = 0;
 

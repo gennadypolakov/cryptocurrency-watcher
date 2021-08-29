@@ -103,7 +103,7 @@ export const Chart = (props) => {
       >
         <div className={s.header}>
           <div className={s.info}>
-            <span title={`5m ${lang?.chart}`} className={s.title}>{symbol}</span>
+            <span className={s.title}>{symbol}</span>
             <div className={s.intervals}>{intervals.map((i) => (
               <span
                 className={i === currentInterval ? s.currentInterval : ''}
@@ -113,13 +113,13 @@ export const Chart = (props) => {
                 {i}
               </span>
             ))}</div>
-            {ticker?.averageVolumeAsString ? <Tooltip title={lang?.last5mAverageVolume(last5mCount)}>
+            {ticker?.averageVolumeAsString ? <Tooltip title={lang?.last5mAverageVolume(last5mCount)} placement="bottom">
               <span>{ticker?.averageVolumeAsString}</span>
             </Tooltip> : null}
-            {average ? <Tooltip title={lang?.allTimeAverageVolume}>
+            {average ? <Tooltip title={lang?.allTimeAverageVolume} placement="bottom">
               <span>{average}</span>
             </Tooltip> : null}
-            {highVolume ? <Tooltip title={lang?.currentHighVolume}>
+            {highVolume ? <Tooltip title={lang?.currentHighVolume} placement="bottom">
               <span className={s.highVolume}>{highVolume}</span>
             </Tooltip> : null}
           </div>

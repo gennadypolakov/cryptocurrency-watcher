@@ -315,6 +315,7 @@ export class Ticker {
           if (bar.volume > this.volume.average * (this.config?.averageVolumeMultiplier || 1)) {
             this.highVolume = bar.volume;
             if (
+              this.config.highVolumeNotifications &&
               !this.state.btcHighVolume &&
               !this.isTimeout &&
               bar.time !== this.volume.time &&

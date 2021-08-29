@@ -40,7 +40,7 @@ export class Level {
     const timeDelta = currentTime - (this.time || currentTime) - minLevelAge * 1000 * 60 * 60;
     if (priceDelta > 0) {
       if (priceDelta / price < priceDistance && timeDelta > 0 && this.isActual) {
-        if (!this.ticker.isTimeout && !this.viewed) {
+        if (this.ticker.config.levelNotifications && !this.ticker.isTimeout && !this.viewed) {
           this.ticker?.state?.events$?.next(this);
         }
         if (!this.blinkIntervalId) {
